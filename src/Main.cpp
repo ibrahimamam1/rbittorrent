@@ -60,13 +60,19 @@ int main(int argc, char *argv[]) {
                 << std::endl;
       return 1;
     }
-    // You can use print statements as follows for debugging, they'll be visible
-    // when running tests.
-    std::cerr << "Logs from your program will appear here!" << std::endl;
 
     std::string encoded_value = argv[2];
     json decoded_value = decode_bencoded_value(encoded_value);
-    std::cout << decoded_value.dump() << std::endl;
+    
+    // Print without quotes based on the type
+    if (decoded_value.is_string()) {
+      std::cout << decoded_value.get<std::string>() << std::endl;
+    } else if (decoded_value.is_number_integer()) {
+      std::cout << decoded_value.get<int>() << std::endl;
+    } else {
+      // Fallback to dump() for other types (e.g., arrays, objects)
+      std::cout << decoded_value.dump() << std::endl;
+    }
   } else {
     std::cerr << "unknown command: " << command << std::endl;
     return 1;
