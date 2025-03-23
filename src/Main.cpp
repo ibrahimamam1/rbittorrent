@@ -65,9 +65,7 @@ int main(int argc, char *argv[]) {
     json decoded_value = decode_bencoded_value(encoded_value);
     
     // Print without quotes based on the type
-    if (decoded_value.is_string()) {
-      std::cout << decoded_value.get<std::string>() << std::endl;
-    } else if (decoded_value.is_number_integer()) {
+    if (decoded_value.is_number_integer()) {
       std::cout << decoded_value.get<int>() << std::endl;
     } else {
       // Fallback to dump() for other types (e.g., arrays, objects)
