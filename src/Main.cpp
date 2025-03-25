@@ -2,46 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include <vector>
-
-#include "lib/nlohmann/json.hpp"
-
-using json = nlohmann::json;
-
-json decode_string(const std::string &encoded_value) {
-  // Example: "5:hello" -> "hello"
-  size_t colon_index = encoded_value.find(':');
-  if (colon_index != std::string::npos) {
-    std::string number_string = encoded_value.substr(0, colon_index);
-    int64_t number = std::atoll(number_string.c_str());
-    std::string str = encoded_value.substr(colon_index + 1, number);
-    return json(str);
-  } else {
-    throw std::runtime_error("Invalid encoded value: " + encoded_value);
-  }
-}
-
-json decode_int(const std::string &encoded_value) {
-  // example i52e -> 52
-  size_t end_index = encoded_value.find('e');
-  if (end_index != std::string::npos) {
-    std::string number_str = encoded_value.substr(1, end_index - 1);
-    return number_str;
-  } else {
-    throw std::runtime_error("Invalid encoded value: " + encoded_value);
-  }
-}
-
-std::string decode_bencoded_value(const std::string &encoded_value) {
-  if (std::isdigit(encoded_value[0])) {
-    json decoded_str = decode_string(encoded_value);
-    return decoded_str.dump();
-  } else if (encoded_value[0] == 'i') {
-    return decode_int(encoded_value);
-  } else {
-    throw std::runtime_error("Unhandled encoded value: " + encoded_value);
-  }
-}
+#include "bencode/decode.hpp"
 
 int main(int argc, char *argv[]) {
   // Flush after every std::cout / std::cerr
