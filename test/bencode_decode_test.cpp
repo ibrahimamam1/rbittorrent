@@ -50,6 +50,22 @@ TEST(DecodeTests, DecodeLists) {
   EXPECT_THROW(decode_bencoded_value("l5:helloee"), std::runtime_error); // Extra 'e'
 }
 
+TEST(DecodeTests, DecodeDictionaries) {
+  // Valid cases
+  EXPECT_EQ(decode_bencoded_value("d3:bar4:spam3:fooi42ee"), "{\"bar\":\"spam\",\"foo\":42}");
+  EXPECT_EQ(decode_bencoded_value("de"), "{}"); // Empty dictionary
+  EXPECT_EQ(decode_bencoded_value("d0:0:e"), "{\"\":\"\"}"); // Empty key and value
+  EXPECT_EQ(decode_bencoded_value("d3:key5:valuee"), "{\"key\":\"value\"}");
+  EXPECT_EQ(decode_bencoded_value("d4:spaml5:hello5:worldee"), "{\"spam\":[\"hello\",\"world\"]}");
+  // Nested dictionary
+  EXPECT_EQ(decode_bencoded_value("d3:food3:bar4:spamee"), "{\"foo\":{\"bar\":\"spam\"}}");
+
+  // Invalid cases
+  EXPECT_THROW(decode_bencoded_value("d3:bar4:spam3:fooi42e"), std::runtime_error); // Missing final 'e'
+  EXPECT_THROW(decode_bencoded_value("d3:bar4:spam3:fooi42eee"), std::runtime_error); // Extra 'e'
+  EXPECT_THROW(decode_bencoded_value("d3:bar4:spam3:foo"), std::runtime_error); // Incomplete dictionary
+}
+
 int main(int argc, char* argv[]){
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

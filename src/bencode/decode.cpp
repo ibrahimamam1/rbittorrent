@@ -7,7 +7,6 @@
 #include <stack>
 #include <stdexcept>
 #include <string>
-
 std::string decode_string(const std::string &encoded_value, size_t &cursor) {
   // Example: "5:hello" -> "hello"
   size_t colon_index =
@@ -52,7 +51,6 @@ std::string decode_int(const std::string &encoded_value, size_t &cursor) {
   return number_str;
 }
 
-
 std::string decode_bencoded_value(const std::string &encoded_value) {
   std::string decoded_value = "";
   size_t cursor = 0;
@@ -63,44 +61,49 @@ std::string decode_bencoded_value(const std::string &encoded_value) {
 
   std::stack<char> types_encountered;
   bool firstListElement = true;
-  bool isValueElement = false;
+  bool isKeyElement = true;
   std::string lastDictionarykey = "";
 
   while (cursor < len) {
     // decode string
     if (std::isdigit(encoded_value[cursor])) {
       std::string str = decode_string(encoded_value, cursor);
-
-      if (types_encountered.size() > 0 && types_encountered.top() == 'd'){
-        if(isValueElement)  decoded_value += ":";
-        else{
-          if(!firstListElement) decoded_value += ",";
-          if(str < lastDictionarykey) throw std::runtime_error("Invalid Bencode: Dictionary keys must be sorted in ascending order => " + str + " > " + lastDictionarykey);
+      if (types_encountered.size() > 0 && types_encountered.top() == 'd') {
+        if (isKeyElement) {
+          if (!firstListElement)
+            decoded_value += ",";
+          if (str < lastDictionarykey)
+            throw std::runtime_error("Invalid Bencode: Dictionary keys must be "
+                                     "sorted in ascending order => " +
+                                     str + " < " + lastDictionarykey);
           lastDictionarykey = str;
+          decoded_value += str;
+          decoded_value += ":";
+          isKeyElement = false;
+        } else {
+          decoded_value += str;
+          isKeyElement = true;
           firstListElement = false;
         }
-        isValueElement = !isValueElement;
+      } else {
+        if (!firstListElement)
+          decoded_value += ",";
+
+        decoded_value += str;
+        isKeyElement = true;
+        firstListElement = false;
       }
-      else if (types_encountered.size() > 0 &&
-          !firstListElement)
-        decoded_value += ",";
-
-
-      decoded_value += str;
     } // decode integer
     else if (encoded_value[cursor] == 'i') {
-      if (types_encountered.size() > 0 && types_encountered.top() == 'd'){
-        if(isValueElement)
-          decoded_value += ":";
-        else 
-          throw std::runtime_error("Invalid Bencode: dictionary Key must be string");
-        
-        isValueElement = !isValueElement;
-      }
-      else if (types_encountered.size() > 0 &&
-          !firstListElement)
+      if (types_encountered.size() > 0 && types_encountered.top() == 'd') {
+        if (isKeyElement)
+          throw std::runtime_error(
+              "Invalid Bencode: dictionary Key must be string");
+      } else if (types_encountered.size() > 0 && !firstListElement)
         decoded_value += ",";
       decoded_value += decode_int(encoded_value, cursor);
+      firstListElement = false;
+      isKeyElement = !isKeyElement;
     } // start list
     else if (encoded_value[cursor] == 'l') {
       types_encountered.push('l');
@@ -110,11 +113,12 @@ std::string decode_bencoded_value(const std::string &encoded_value) {
       decoded_value += "[";
       firstListElement = true;
       cursor++;
-    }//start dictionary
+    } // start dictionary
     else if (encoded_value[cursor] == 'd') {
       types_encountered.push('d');
       decoded_value += "{";
-      isValueElement = false;
+      isKeyElement = true;
+      lastDictionarykey = "";
       cursor++;
     } else if (encoded_value[cursor] == 'e') {
       if (types_encountered.size() == 0)
@@ -129,8 +133,6 @@ std::string decode_bencoded_value(const std::string &encoded_value) {
     } else {
       throw std::runtime_error("Invalid Bencode: " + encoded_value);
     }
-    if(types_encountered.size() > 0 && types_encountered.top() == 'l')
-      firstListElement = false;
   }
   if (types_encountered.size() > 0)
     throw std::runtime_error("Invalid Bencode: Missing 'e'");
