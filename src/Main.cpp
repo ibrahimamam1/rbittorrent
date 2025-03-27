@@ -1,8 +1,9 @@
+#include "bencode/decode.hpp"
+#include "torrent/torrent.hpp"
 #include <cctype>
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include "bencode/decode.hpp"
 
 int main(int argc, char *argv[]) {
   // Flush after every std::cout / std::cerr
@@ -26,6 +27,13 @@ int main(int argc, char *argv[]) {
     std::string encoded_value = argv[2];
     std::string decoded_value = decode_bencoded_value(encoded_value);
     std::cout << decoded_value << std::endl;
+  } else if (command == "torrent") {
+    if (argc < 3) {
+      std::cerr << "Usage: " << argv[0] << " torrent <filepath>"
+                << std::endl;
+      return 1;
+    }
+    parse_torrent_file("/home/rgb/Desktop/projects/codecrafters-bittorrent-cpp/sample.torrent");
   } else {
     std::cerr << "unknown command: " << command << std::endl;
     return 1;

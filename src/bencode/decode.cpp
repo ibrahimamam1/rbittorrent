@@ -7,10 +7,10 @@
 #include <stack>
 #include <stdexcept>
 #include <string>
-std::string decode_string(const std::string &encoded_value, size_t &cursor) {
+
+json decode_string(const std::string &encoded_value, size_t &cursor) {
   // Example: "5:hello" -> "hello"
-  size_t colon_index =
-      encoded_value.find(':', cursor); // Example: "5:hello" -> "hello"
+  size_t colon_index = encoded_value.find(':', cursor);
   if (colon_index != std::string::npos) {
     std::string number_string =
         encoded_value.substr(cursor, (colon_index - cursor));
@@ -20,13 +20,12 @@ std::string decode_string(const std::string &encoded_value, size_t &cursor) {
     }
 
     int64_t number = std::atoll(number_string.c_str());
+    if (number < 0)
+      throw std::runtime_error("Invalid bencode: Length must be positive");
+
     std::string str = encoded_value.substr(colon_index + 1, number);
-    if (str.length() != number) {
-      throw std::runtime_error("Invalid bencode: Length does not match");
-    }
-    json json_str = json(str);
     cursor = colon_index + number + 1;
-    return json_str.dump();
+    return json(str);
   } else {
     throw std::runtime_error(
         "Invalid encoded value: missing column after length in" +
@@ -34,7 +33,7 @@ std::string decode_string(const std::string &encoded_value, size_t &cursor) {
   }
 }
 
-std::string decode_int(const std::string &encoded_value, size_t &cursor) {
+json decode_int(const std::string &encoded_value, size_t &cursor) {
   // example i52e -> 52
   size_t end_index = encoded_value.find('e', cursor);
   if (end_index == std::string::npos) {
@@ -48,93 +47,80 @@ std::string decode_int(const std::string &encoded_value, size_t &cursor) {
   }
 
   cursor = end_index + 1;
-  return number_str;
+  return json(number_str);
 }
 
-std::string decode_bencoded_value(const std::string &encoded_value) {
-  std::string decoded_value = "";
-  size_t cursor = 0;
+json decode_list(const std::string &encoded_value, size_t &cursor) {
+  json list;
+
   size_t len = encoded_value.length();
-
-  if (len == 0)
-    throw std::runtime_error("No input");
-
-  std::stack<char> types_encountered;
-  bool firstListElement = true;
-  bool isKeyElement = true;
-  std::string lastDictionarykey = "";
-
   while (cursor < len) {
-    // decode string
     if (std::isdigit(encoded_value[cursor])) {
-      std::string str = decode_string(encoded_value, cursor);
-      if (types_encountered.size() > 0 && types_encountered.top() == 'd') {
-        if (isKeyElement) {
-          if (!firstListElement)
-            decoded_value += ",";
-          if (str < lastDictionarykey)
-            throw std::runtime_error("Invalid Bencode: Dictionary keys must be "
-                                     "sorted in ascending order => " +
-                                     str + " < " + lastDictionarykey);
-          lastDictionarykey = str;
-          decoded_value += str;
-          decoded_value += ":";
-          isKeyElement = false;
-        } else {
-          decoded_value += str;
-          isKeyElement = true;
-          firstListElement = false;
-        }
-      } else {
-        if (!firstListElement)
-          decoded_value += ",";
-
-        decoded_value += str;
-        isKeyElement = true;
-        firstListElement = false;
-      }
-    } // decode integer
-    else if (encoded_value[cursor] == 'i') {
-      if (types_encountered.size() > 0 && types_encountered.top() == 'd') {
-        if (isKeyElement)
-          throw std::runtime_error(
-              "Invalid Bencode: dictionary Key must be string");
-      } else if (types_encountered.size() > 0 && !firstListElement)
-        decoded_value += ",";
-      decoded_value += decode_int(encoded_value, cursor);
-      firstListElement = false;
-      isKeyElement = !isKeyElement;
-    } // start list
-    else if (encoded_value[cursor] == 'l') {
-      types_encountered.push('l');
-      if (!firstListElement)
-        decoded_value += ",";
-
-      decoded_value += "[";
-      firstListElement = true;
+      json str = decode_string(encoded_value, cursor);
+      list.push_back(str);
+    } else if (encoded_value[cursor] == 'i') {
+      json num = decode_int(encoded_value, cursor);
+      list.push_back(num);
+    } else if(encoded_value[cursor] == 'l'){
       cursor++;
-    } // start dictionary
-    else if (encoded_value[cursor] == 'd') {
-      types_encountered.push('d');
-      decoded_value += "{";
-      isKeyElement = true;
-      lastDictionarykey = "";
-      cursor++;
-    } else if (encoded_value[cursor] == 'e') {
-      if (types_encountered.size() == 0)
-        throw std::runtime_error("Invalid bencode value: " + encoded_value);
-      else if (types_encountered.top() == 'l')
-        decoded_value += "]";
-      else if (types_encountered.top() == 'd')
-        decoded_value += "}";
-
-      types_encountered.pop();
-      cursor++;
-    } else {
-      throw std::runtime_error("Invalid Bencode: " + encoded_value);
+      json sublist = decode_list(encoded_value, cursor);
+      list.push_back(sublist);
+    }else if(encoded_value[cursor] == 'd'){
+      json dic = decode_dictionary(encoded_value, cursor);
+      list.push_back(dic);
     }
+    else if(encoded_value[cursor] == 'e'){
+      return list;
+    } 
   }
-  if (types_encountered.size() > 0)
-    throw std::runtime_error("Invalid Bencode: Missing 'e'");
+  throw std::runtime_error("Invalid bencode in " + encoded_value +" : list must end with 'e'");
+}
+
+json decode_dictionary(const std::string &encoded_value, size_t &cursor) {
+  json dic;
+  bool isKey = true;
+  json key, value;
+  size_t len = encoded_value.length();
+  while (cursor < len) {
+    json str;
+    if (std::isdigit(encoded_value[cursor])) {
+      str = decode_string(encoded_value, cursor);
+    } else if (encoded_value[cursor] == 'i') {
+      str = decode_int(encoded_value, cursor);
+    } else if(encoded_value[cursor] == 'l'){
+      str = decode_list(encoded_value, cursor);
+    }else if(encoded_value[cursor] == 'd'){
+      cursor++;
+      str = decode_dictionary(encoded_value, cursor);
+    }
+    else if(encoded_value[cursor] == 'e'){
+      return dic;
+    }
+
+    if(isKey){
+        key = str;
+      }else{
+        value = str;
+        dic[key] = value;
+      } 
+  }
+  throw std::runtime_error("Invalid bencode in " + encoded_value +" : dictionary must end with 'e'");
+}
+json decode_bencoded_value(const std::string &encoded_value) {
+  size_t cursor = 0;
+  json decoded_value;
+  if (std::isdigit(encoded_value[0])) {
+      decoded_value = decode_string(encoded_value, cursor);
+    } else if (encoded_value[0] == 'i') {
+      decoded_value = decode_int(encoded_value, cursor);
+    } else if(encoded_value[0] == 'l'){
+      cursor++;
+      decoded_value = decode_list(encoded_value, cursor);
+    }else if(encoded_value[0] == 'd'){
+      cursor++;
+      decoded_value = decode_dictionary(encoded_value, cursor);
+    }else{
+      throw std::runtime_error("Invalid Bencode symbol");
+  }
   return decoded_value;
 }
