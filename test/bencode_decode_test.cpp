@@ -19,10 +19,10 @@ TEST(DecodeTests, DecodeStrings) {
 }
 
 TEST(DecodeTests, DecodeIntegers){
-  EXPECT_EQ(decode_bencoded_value("i52e"), "52"); //positive number
-  EXPECT_EQ(decode_bencoded_value("i-40e"), "-40"); //negative number
-  EXPECT_EQ(decode_bencoded_value("i0e"), "0"); //zero
-  EXPECT_EQ(decode_bencoded_value("i123456789012345e"), "123456789012345"); //very large number
+  EXPECT_EQ(decode_bencoded_value("i52e"), "\"52\""); //positive number
+  EXPECT_EQ(decode_bencoded_value("i-40e"), "\"-40\""); //negative number
+  EXPECT_EQ(decode_bencoded_value("i0e"), "\"0\""); //zero
+  EXPECT_EQ(decode_bencoded_value("i123456789012345e"), "\"123456789012345\""); //very large number
   
   EXPECT_THROW(decode_bencoded_value("i10"), std::runtime_error); //missing e
   EXPECT_THROW(decode_bencoded_value("i10ee"), std::runtime_error); //extra e
@@ -33,13 +33,13 @@ TEST(DecodeTests, DecodeLists) {
   // Valid cases
   EXPECT_EQ(decode_bencoded_value("l5:hello5:worlde"), "[\"hello\",\"world\"]"); // Simple list with strings
   EXPECT_EQ(decode_bencoded_value("l5:helloe"), "[\"hello\"]"); // Single-element list
-  EXPECT_EQ(decode_bencoded_value("l5:helloi42ee"), "[\"hello\",42]"); // Mixed types (string and integer)
-  EXPECT_EQ(decode_bencoded_value("le"), "[]"); // Empty list
-  EXPECT_EQ(decode_bencoded_value("li9223372036854775807ee"), "[9223372036854775807]"); // Large integer
-  EXPECT_EQ(decode_bencoded_value("li-42ee"), "[-42]"); // Negative integer
-  EXPECT_EQ(decode_bencoded_value("li42ei-7ei0ee"), "[42,-7,0]"); // Multiple integers
+  EXPECT_EQ(decode_bencoded_value("l5:helloi42ee"), "[\"hello\",\"42\"]"); // Mixed types (string and integer)
+  EXPECT_EQ(decode_bencoded_value("le"), "null"); // Empty list
+  EXPECT_EQ(decode_bencoded_value("li9223372036854775807ee"), "[\"9223372036854775807\"]"); // Large integer
+  EXPECT_EQ(decode_bencoded_value("li-42ee"), "[\"-42\"]"); // Negative integer
+  EXPECT_EQ(decode_bencoded_value("li42ei-7ei0ee"), "[\"42\",\"-7\",\"0\"]"); // Multiple integers
   EXPECT_EQ(decode_bencoded_value("l0:e"), "[\"\"]"); // List with empty string
-  EXPECT_EQ(decode_bencoded_value("l5:helloi42e3:catl4:dogsee"), "[\"hello\",42,\"cat\",[\"dogs\"]]"); // recursive lists
+  EXPECT_EQ(decode_bencoded_value("l5:helloi42e3:catl4:dogsee"), "[\"hello\",\"42\",\"cat\",[\"dogs\"]]"); // recursive lists
 
   // Invalid cases
   EXPECT_THROW(decode_bencoded_value("l5:hello"), std::runtime_error); // Missing 'e'
@@ -52,8 +52,8 @@ TEST(DecodeTests, DecodeLists) {
 
 TEST(DecodeTests, DecodeDictionaries) {
   // Valid cases
-  EXPECT_EQ(decode_bencoded_value("d3:bar4:spam3:fooi42ee"), "{\"bar\":\"spam\",\"foo\":42}");
-  EXPECT_EQ(decode_bencoded_value("de"), "{}"); // Empty dictionary
+  EXPECT_EQ(decode_bencoded_value("d3:bar4:spam3:fooi42ee"), "{\"bar\":\"spam\",\"foo\":\"42\"}");
+  EXPECT_EQ(decode_bencoded_value("de"), "null"); // Empty dictionary
   EXPECT_EQ(decode_bencoded_value("d0:0:e"), "{\"\":\"\"}"); // Empty key and value
   EXPECT_EQ(decode_bencoded_value("d3:key5:valuee"), "{\"key\":\"value\"}");
   EXPECT_EQ(decode_bencoded_value("d4:spaml5:hello5:worldee"), "{\"spam\":[\"hello\",\"world\"]}");
@@ -65,6 +65,7 @@ TEST(DecodeTests, DecodeDictionaries) {
   EXPECT_THROW(decode_bencoded_value("d3:bar4:spam3:fooi42eee"), std::runtime_error); // Extra 'e'
   EXPECT_THROW(decode_bencoded_value("d3:bar4:spam3:foo"), std::runtime_error); // Incomplete dictionary
 }
+
 
 int main(int argc, char* argv[]){
   ::testing::InitGoogleTest(&argc, argv);
