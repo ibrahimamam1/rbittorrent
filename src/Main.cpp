@@ -29,11 +29,17 @@ int main(int argc, char *argv[]) {
     std::cout << decoded_value << std::endl;
   } else if (command == "torrent") {
     if (argc < 3) {
-      std::cerr << "Usage: " << argv[0] << " torrent <filepath>"
-                << std::endl;
+      std::cerr << "Usage: " << argv[0] << " torrent <filepath>" << std::endl;
       return 1;
     }
-    parse_torrent_file("/home/rgb/Desktop/projects/codecrafters-bittorrent-cpp/sample.torrent");
+    Torrent torrent =
+        parse_torrent_file("/home/rgb/Desktop/projects/"
+                           "codecrafters-bittorrent-cpp/sample.torrent");
+    std::cout << "tracker: " << torrent.tracker_url << std::endl;
+    std::cout << "name: " << torrent.name << std::endl;
+    std::cout << "pieces: " << torrent.pieces << std::endl;
+    std::cout << "piece_length: " << torrent.piece_length << std::endl;
+    std::cout << "length: " << torrent.length << std::endl;
   } else {
     std::cerr << "unknown command: " << command << std::endl;
     return 1;

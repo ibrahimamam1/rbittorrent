@@ -10,8 +10,9 @@ typedef struct file{
 
 typedef struct torrent{
   std::string tracker_url;
+  std::string piece_length;
   std::string name;
-  std::vector<std::string>pieces;
+  std::string pieces;
   size_t length = 0;
   std::vector<File>files;
 }Torrent;

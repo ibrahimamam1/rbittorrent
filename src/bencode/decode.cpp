@@ -83,6 +83,7 @@ json decode_list(const std::string &encoded_value, size_t &cursor) {
                            " : list must end with 'e'");
 }
 
+
 json decode_dictionary(const std::string &encoded_value, size_t &cursor) {
   json dic;
   bool isKey = true;
@@ -104,7 +105,7 @@ json decode_dictionary(const std::string &encoded_value, size_t &cursor) {
       str = decode_dictionary(encoded_value, cursor);
     } else if (encoded_value[cursor] == 'e') {
       cursor++;
-      return dic;  // Correctly return the dictionary when 'e' is encountered
+      return dic;
     } else {
       throw std::runtime_error("Invalid bencode: unknown character: " +
                                std::string(1, encoded_value[cursor]));
@@ -115,7 +116,14 @@ json decode_dictionary(const std::string &encoded_value, size_t &cursor) {
       isKey = false;  // Next should be a value
     } else {
       value = str;
-      dic[key] = value;
+      // Special handling for "pieces" field
+      if (key.get<std::string>() == "pieces" && value.is_string()) {
+        std::string binary_str = value.get<std::string>();
+        std::string base64_str = base64_encode(binary_str);
+        dic[key] = base64_str;
+      } else {
+        dic[key] = value;
+      }
       isKey = true;  // Next should be a key
     }
   }
@@ -142,6 +150,7 @@ json decode_bencoded_value(const std::string &encoded_value) {
   }
   if (cursor != encoded_value.length())
       throw std::runtime_error("Invalid bencode: " + encoded_value);
-
-  return decoded_value.dump();
+  
+  return decoded_value;
+ // return decoded_value.dump(); // for tests
 }
