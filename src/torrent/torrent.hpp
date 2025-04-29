@@ -1,20 +1,28 @@
-#include <string>
-#include <vector>
+#pragma once
 
-#include "../lib/nlohmann/json.hpp"
+#include <string>
+#include <utility>
+#include <vector>
+#include "../network/network_manager.hpp"
 
 typedef struct file{
   std::string name;
   size_t length;
 }File;
 
-typedef struct torrent{
+class TorrentHelper{
   std::string tracker_url;
+  std::string info;
   std::string piece_length;
   std::string name;
   std::string pieces;
   size_t length = 0;
   std::vector<File>files;
-}Torrent;
+  
+  //A Peer is represented as a pair <IP_ADDRES, PORT_NUMBER>
+  std::vector<std::pair<std::string, std::string>>Peers;
+public:
+  bool parseTorrentFile(std::string filepath);
+  bool getPeers(NetworkManager& nw);
+};
 
-Torrent parse_torrent_file(std::string filepath);

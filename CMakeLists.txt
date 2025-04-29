@@ -1,20 +1,29 @@
 cmake_minimum_required(VERSION 3.13)
-
+cmake_policy(SET CMP0167 NEW)
 project(bittorrent-starter-cpp)
 
 # Enable C++23 standard
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Collect source and test files
+
+# Collect source files
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.hpp)
 # Remove Main.cpp from SOURCE_FILES
 list(FILTER SOURCE_FILES EXCLUDE REGEX ".*Main\\.cpp$")
 
+# Collect test files
 file(GLOB_RECURSE TEST_FILES test/*.cpp)
 
+# Find Boost, requiring at least version 1.74
+find_package(Boost 1.74 REQUIRED COMPONENTS url system)
+
 # Main executable
-add_executable(bencode src/Main.cpp ${SOURCE_FILES})
+add_executable(rbittorent  src/Main.cpp ${SOURCE_FILES})
+target_link_libraries(rbittorent PRIVATE
+    Boost::url
+    Boost::system   
+)
 
 # Google Test setup
 find_package(GTest REQUIRED)
@@ -24,7 +33,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 add_executable(bencode_test ${TEST_FILES} ${SOURCE_FILES})
 
 # Link against Google Test and pthread
-target_link_libraries(bencode_test PRIVATE GTest::GTest GTest::Main pthread)
+target_link_libraries(bencode_test PRIVATE GTest::GTest GTest::Main pthread Boost::url Boost::system)
 
 # Enable test discovery in CTest
 enable_testing()

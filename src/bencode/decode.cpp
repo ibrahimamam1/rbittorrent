@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <string>
 
-json decode_string(const std::string &encoded_value, size_t &cursor) {
+json BencodeDecoder::decode_string(const std::string &encoded_value, size_t &cursor) {
   // Example: "5:hello" -> "hello"
   size_t colon_index = encoded_value.find(':', cursor);
   if (colon_index != std::string::npos) {
@@ -36,7 +36,7 @@ json decode_string(const std::string &encoded_value, size_t &cursor) {
   }
 }
 
-json decode_int(const std::string &encoded_value, size_t &cursor) {
+json BencodeDecoder::decode_int(const std::string &encoded_value, size_t &cursor) {
   // example i52e -> 52
   size_t end_index = encoded_value.find('e', cursor);
   if (end_index == std::string::npos) {
@@ -53,7 +53,7 @@ json decode_int(const std::string &encoded_value, size_t &cursor) {
   return json(number_str);
 }
 
-json decode_list(const std::string &encoded_value, size_t &cursor) {
+json BencodeDecoder::decode_list(const std::string &encoded_value, size_t &cursor) {
   json list;
 
   size_t len = encoded_value.length();
@@ -84,7 +84,7 @@ json decode_list(const std::string &encoded_value, size_t &cursor) {
 }
 
 
-json decode_dictionary(const std::string &encoded_value, size_t &cursor) {
+json BencodeDecoder::decode_dictionary(const std::string &encoded_value, size_t &cursor) {
   json dic;
   bool isKey = true;
   json key, value;
@@ -132,7 +132,7 @@ json decode_dictionary(const std::string &encoded_value, size_t &cursor) {
                            " : dictionary must end with 'e'");
 }
 
-json decode_bencoded_value(const std::string &encoded_value) {
+json BencodeDecoder::decode_bencoded_value(const std::string &encoded_value) {
   size_t cursor = 0;
   json decoded_value;
   if (std::isdigit(encoded_value[0])) {
@@ -152,5 +152,5 @@ json decode_bencoded_value(const std::string &encoded_value) {
       throw std::runtime_error("Invalid bencode: " + encoded_value);
   
   return decoded_value;
- // return decoded_value.dump(); // for tests
+  //return decoded_value.dump(); // for tests
 }
