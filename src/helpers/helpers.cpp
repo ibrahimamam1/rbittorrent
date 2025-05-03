@@ -2,6 +2,8 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include "helpers.hpp"
+#include <openssl/sha.h>
 
 bool isValidNumber(const std::string& str) {
     if (str.empty()) return false;
@@ -47,4 +49,32 @@ std::string base64_encode(const std::string& input) {
     }
 
     return output;
+}
+
+BencodeValue json_to_bencode(const json& j) {
+    if (j.is_string()) {
+        return BencodeValue(j.get<std::string>());
+    } else if (j.is_number_integer()) {
+        return BencodeValue(j.get<long long>());
+    } else if (j.is_array()) {
+        BencodeList list;
+        for (const auto& item : j) {
+            list.push_back(json_to_bencode(item));
+        }
+        return BencodeValue(list);
+    } else if (j.is_object()) {
+        BencodeDict dict;
+        for (const auto& item : j.items()) {
+            dict[item.key()] = json_to_bencode(item.value());
+        }
+        return BencodeValue(dict);
+    } else {
+        throw std::runtime_error("Unsupported JSON type for Bencode conversion");
+    }
+}
+
+std::vector<unsigned char> compute_sha1(const std::string& val) {
+    std::vector<unsigned char> hash(SHA_DIGEST_LENGTH); // SHA1 digest is 20 bytes
+    SHA1(reinterpret_cast<const unsigned char*>(val.data()), val.length(), hash.data());
+    return hash;
 }

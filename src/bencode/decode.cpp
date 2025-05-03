@@ -50,7 +50,8 @@ json BencodeDecoder::decode_int(const std::string &encoded_value, size_t &cursor
   }
 
   cursor = end_index + 1;
-  return json(number_str);
+  long long num = atoll(number_str.c_str());
+  return json(num);
 }
 
 json BencodeDecoder::decode_list(const std::string &encoded_value, size_t &cursor) {
@@ -119,8 +120,7 @@ json BencodeDecoder::decode_dictionary(const std::string &encoded_value, size_t 
       // Special handling for "pieces" field
       if (key.get<std::string>() == "pieces" && value.is_string()) {
         std::string binary_str = value.get<std::string>();
-        std::string base64_str = base64_encode(binary_str);
-        dic[key] = base64_str;
+        dic[key] = binary_str;
       } else {
         dic[key] = value;
       }
@@ -152,5 +152,4 @@ json BencodeDecoder::decode_bencoded_value(const std::string &encoded_value) {
       throw std::runtime_error("Invalid bencode: " + encoded_value);
   
   return decoded_value;
-  //return decoded_value.dump(); // for tests
 }

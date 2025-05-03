@@ -4,7 +4,9 @@
 #include <utility>
 #include <vector>
 #include "../network/network_manager.hpp"
+#include "../lib/nlohmann/json.hpp"
 
+using json = nlohmann::json;
 typedef struct file{
   std::string name;
   size_t length;
@@ -12,8 +14,9 @@ typedef struct file{
 
 class TorrentHelper{
   std::string tracker_url;
-  std::string info;
-  std::string piece_length;
+  json info;
+  std::vector<unsigned char>raw_info;
+  size_t piece_length;
   std::string name;
   std::string pieces;
   size_t length = 0;
@@ -24,5 +27,6 @@ class TorrentHelper{
 public:
   bool parseTorrentFile(std::string filepath);
   bool getPeers(NetworkManager& nw);
+  std::string generatePeerId();
 };
 

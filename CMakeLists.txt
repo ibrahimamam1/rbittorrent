@@ -18,11 +18,16 @@ file(GLOB_RECURSE TEST_FILES test/*.cpp)
 # Find Boost, requiring at least version 1.74
 find_package(Boost 1.74 REQUIRED COMPONENTS url system)
 
+#Find Openssl
+find_package(OpenSSL REQUIRED)
+
 # Main executable
-add_executable(rbittorent  src/Main.cpp ${SOURCE_FILES})
-target_link_libraries(rbittorent PRIVATE
+add_executable(rbittorrent src/Main.cpp ${SOURCE_FILES})
+target_link_libraries(rbittorrent PRIVATE
     Boost::url
-    Boost::system   
+    Boost::system
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 # Google Test setup
@@ -32,8 +37,16 @@ include_directories(${GTEST_INCLUDE_DIRS})
 # Test executable
 add_executable(bencode_test ${TEST_FILES} ${SOURCE_FILES})
 
-# Link against Google Test and pthread
-target_link_libraries(bencode_test PRIVATE GTest::GTest GTest::Main pthread Boost::url Boost::system)
+# Link against Google Test, pthread, and OpenSSL
+target_link_libraries(bencode_test PRIVATE
+    GTest::GTest
+    GTest::Main
+    pthread
+    Boost::url
+    Boost::system
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
 
 # Enable test discovery in CTest
 enable_testing()
