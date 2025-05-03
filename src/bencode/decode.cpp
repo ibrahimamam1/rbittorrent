@@ -56,7 +56,6 @@ json BencodeDecoder::decode_int(const std::string &encoded_value, size_t &cursor
 
 json BencodeDecoder::decode_list(const std::string &encoded_value, size_t &cursor) {
   json list;
-
   size_t len = encoded_value.length();
   while (cursor < len) {
     if (std::isdigit(encoded_value[cursor])) {
@@ -70,6 +69,7 @@ json BencodeDecoder::decode_list(const std::string &encoded_value, size_t &curso
       json sublist = decode_list(encoded_value, cursor);
       list.push_back(sublist);
     } else if (encoded_value[cursor] == 'd') {
+      cursor++;
       json dic = decode_dictionary(encoded_value, cursor);
       list.push_back(dic);
     } else if (encoded_value[cursor] == 'e') {

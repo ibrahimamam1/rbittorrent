@@ -21,7 +21,12 @@ int main(int argc, char *argv[]) {
     bool success = helper.parseTorrentFile(argv[1]);
     if(success){
       NetworkManager nw;
-      helper.getPeers(nw);
+      PeerList peers = helper.getPeers(nw);
+      size_t interval = helper.getInterval();
+
+      for(auto& p : peers){
+        std::cout << "ip: "<< p.ip << "\tport:" << p.port << std::endl;
+      }
       
     }
   }catch(std::runtime_error e){

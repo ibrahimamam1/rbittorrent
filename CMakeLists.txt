@@ -6,6 +6,7 @@ project(bittorrent-starter-cpp)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+add_compile_options(-g -O0)
 
 # Collect source files
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.hpp)
