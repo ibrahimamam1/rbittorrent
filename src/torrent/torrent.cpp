@@ -78,7 +78,7 @@ bool TorrentHelper::parseTorrentFile(std::string filepath) {
   return true;
 }
 
-PeerList TorrentHelper::getPeers(NetworkManager &nw) {
+json TorrentHelper::getPeers(NetworkManager &nw) {
   // Compute SHA1 of info hash
   BencodeValue val = json_to_bencode(info);
   std::string encoded = BencodeEncoder::encode(val);
@@ -89,7 +89,7 @@ PeerList TorrentHelper::getPeers(NetworkManager &nw) {
   // prepare parameters
   parameterList params;
   params.push_back({"info_hash", raw_hash_string});
-  params.push_back({"peer_id", generatePeerId()});
+  params.push_back({"peer_id", PEER_ID});
   params.push_back({"port", LISTEN_PORT});
   params.push_back({"uploaded", "0"});
   params.push_back({"downloaded", "0"});
@@ -100,7 +100,7 @@ PeerList TorrentHelper::getPeers(NetworkManager &nw) {
         nw.makeGetRequest(tracker_url, params);
 
     if (res.result_int() != 200)
-      return PeerList();
+      return json();
     
     // Extract the response body as a string
     std::string response_body = boost::beast::buffers_to_string(res.body().data());
@@ -115,28 +115,15 @@ PeerList TorrentHelper::getPeers(NetworkManager &nw) {
     
     //retreive peer ip and port
     if(!peer_data.contains("peers")){
-      return PeerList();
-    }
-
-    //serialise peers from json to PeerList
-    json peers = peer_data["peers"];
-    PeerList return_value;
-    for(auto peer : peers){
-      std::string ip = peer["ip"];
-      size_t port = static_cast<size_t>(peer["port"]);
-      Peer p{ip, port};
-      return_value.push_back(p);
+      return json();
     }
     
+    json return_value = peer_data["peers"];
     return return_value;
   } catch (const std::exception &e) {
     std::cerr << e.what();
-    return PeerList();
+    return json();
   }
-}
-
-std::string TorrentHelper::generatePeerId() {
-  return "rgb25v1.0-0123456789"; //<rgb><release_year><v><version_number><-0123456789>
 }
 
 size_t TorrentHelper::getInterval() const { return interval; }

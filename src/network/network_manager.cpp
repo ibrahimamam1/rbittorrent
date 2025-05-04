@@ -1,6 +1,9 @@
 #include "network_manager.hpp"
 #include <boost/algorithm/string.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/http/dynamic_body_fwd.hpp>
 #include <boost/beast/http/impl/read.hpp>
 #include <boost/beast/http/impl/write.hpp>
@@ -10,6 +13,18 @@
 #include <boost/url.hpp>
 #include <boost/url/encode.hpp>
 #include <iostream>
+
+// perforsm tcp hanshake with target
+// returns stream object representing the connection
+
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <iostream>
+
+namespace beast = boost::beast;
+namespace asio = boost::asio;
+using tcp = asio::ip::tcp;
+
 
 http::response<http::dynamic_body>
 NetworkManager::makeGetRequest(const std::string &uri, parameterList params) {

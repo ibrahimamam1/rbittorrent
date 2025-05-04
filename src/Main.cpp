@@ -1,5 +1,6 @@
 #include "bencode/decode.hpp"
 #include "network/network_manager.hpp"
+#include "peer/peer_helper.hpp"
 #include "torrent/torrent.hpp"
 #include <cctype>
 #include <cstdlib>
@@ -21,12 +22,10 @@ int main(int argc, char *argv[]) {
     bool success = helper.parseTorrentFile(argv[1]);
     if(success){
       NetworkManager nw;
-      PeerList peers = helper.getPeers(nw);
+      json peer_data = helper.getPeers(nw);
       size_t interval = helper.getInterval();
 
-      for(auto& p : peers){
-        std::cout << "ip: "<< p.ip << "\tport:" << p.port << std::endl;
-      }
+      PeerDownloadHelper peer_helper(peer_data);
       
     }
   }catch(std::runtime_error e){
