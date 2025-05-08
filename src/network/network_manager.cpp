@@ -76,7 +76,6 @@ NetworkManager::makeGetRequest(const std::string &uri, parameterList params) {
     if (ec) {
       throw boost::beast::system_error{ec};
     }
-    std::cout << "Waiting for a response\n";
     // Receive response
     boost::beast::flat_buffer buffer;
     http::read(stream, buffer, res, ec);

@@ -32,5 +32,6 @@ public:
   json getPeers(NetworkManager& nw);
   std::string generatePeerId();
   size_t getInterval() const;
+  std::string getInfoHash();
 };
 

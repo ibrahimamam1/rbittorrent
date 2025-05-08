@@ -24,8 +24,9 @@ int main(int argc, char *argv[]) {
       NetworkManager nw;
       json peer_data = helper.getPeers(nw);
       size_t interval = helper.getInterval();
-
+      
       PeerDownloadHelper peer_helper(peer_data);
+      peer_helper.performBitTorrentHandshakeWithPeers(nw, helper.getInfoHash());
       
     }
   }catch(std::runtime_error e){

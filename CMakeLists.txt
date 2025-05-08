@@ -22,6 +22,10 @@ find_package(Boost 1.74 REQUIRED COMPONENTS url system)
 #Find Openssl
 find_package(OpenSSL REQUIRED)
 
+#find tbb. (needed for c++ parralel execution algorithms)
+find_package(TBB REQUIRED)
+find_package(Threads REQUIRED)
+
 # Main executable
 add_executable(rbittorrent src/Main.cpp ${SOURCE_FILES})
 target_link_libraries(rbittorrent PRIVATE
@@ -29,6 +33,8 @@ target_link_libraries(rbittorrent PRIVATE
     Boost::system
     OpenSSL::SSL
     OpenSSL::Crypto
+    TBB::tbb
+    Threads::Threads
 )
 
 # Google Test setup
@@ -47,6 +53,8 @@ target_link_libraries(bencode_test PRIVATE
     Boost::system
     OpenSSL::SSL
     OpenSSL::Crypto
+    Threads::Threads
+    TBB::tbb
 )
 
 # Enable test discovery in CTest

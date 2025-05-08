@@ -80,15 +80,10 @@ bool TorrentHelper::parseTorrentFile(std::string filepath) {
 
 json TorrentHelper::getPeers(NetworkManager &nw) {
   // Compute SHA1 of info hash
-  BencodeValue val = json_to_bencode(info);
-  std::string encoded = BencodeEncoder::encode(val);
-
-  std::vector<unsigned char> sha_hash = compute_sha1(encoded);
-  std::string raw_hash_string(sha_hash.begin(), sha_hash.end());
-
+  std::string info_hash = getInfoHash();
   // prepare parameters
   parameterList params;
-  params.push_back({"info_hash", raw_hash_string});
+  params.push_back({"info_hash", info_hash});
   params.push_back({"peer_id", PEER_ID});
   params.push_back({"port", LISTEN_PORT});
   params.push_back({"uploaded", "0"});
@@ -101,29 +96,40 @@ json TorrentHelper::getPeers(NetworkManager &nw) {
 
     if (res.result_int() != 200)
       return json();
-    
+
     // Extract the response body as a string
-    std::string response_body = boost::beast::buffers_to_string(res.body().data());
-    
+    std::string response_body =
+        boost::beast::buffers_to_string(res.body().data());
+
     // decode bencoded response
     json peer_data = BencodeDecoder::decode_bencoded_value(response_body);
 
-    //retreive interval
-    if(!peer_data.contains("interval"))
+    // retreive interval
+    if (!peer_data.contains("interval"))
       interval = 0;
-    else interval = static_cast<size_t>(peer_data["interval"]);
-    
-    //retreive peer ip and port
-    if(!peer_data.contains("peers")){
+    else
+      interval = static_cast<size_t>(peer_data["interval"]);
+
+    // retreive peer ip and port
+    if (!peer_data.contains("peers")) {
       return json();
     }
-    
+
     json return_value = peer_data["peers"];
     return return_value;
   } catch (const std::exception &e) {
     std::cerr << e.what();
     return json();
   }
+}
+
+std::string TorrentHelper::getInfoHash() {
+  BencodeValue val = json_to_bencode(info);
+  std::string encoded = BencodeEncoder::encode(val);
+
+  std::vector<unsigned char> sha_hash = compute_sha1(encoded);
+  std::string raw_hash_string(sha_hash.begin(), sha_hash.end());
+  return raw_hash_string;
 }
 
 size_t TorrentHelper::getInterval() const { return interval; }
