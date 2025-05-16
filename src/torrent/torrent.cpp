@@ -78,7 +78,7 @@ bool TorrentHelper::parseTorrentFile(std::string filepath) {
   return true;
 }
 
-json TorrentHelper::getPeers(NetworkManager &nw) {
+json TorrentHelper::getPeers() {
   // Compute SHA1 of info hash
   std::string info_hash = getInfoHash();
   // prepare parameters
@@ -91,6 +91,7 @@ json TorrentHelper::getPeers(NetworkManager &nw) {
 
   // make request
   try {
+    NetworkManager nw;
     http::response<http::dynamic_body> res =
         nw.makeGetRequest(tracker_url, params);
 

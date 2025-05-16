@@ -9,26 +9,42 @@
 PeerDownloadHelper::PeerDownloadHelper() {}
 
 PeerDownloadHelper::PeerDownloadHelper(json data) {
-  for (auto peer : data) {
+  for (auto &peer : data) {
     Peer p(peer["ip"], peer["port"]);
-    peerList.push_back(p);
+    peerList.push_back(std::move(p));
   }
 }
 
 // perform bittorrent handshake with client
 // return number of successfull connections
-size_t PeerDownloadHelper::performBitTorrentHandshakeWithPeers(
-    NetworkManager &nw, const std::string &info_hash) {
-  std::string pstr = "BitTorrent protocol";
-  size_t pstrlen = pstr.length();
-  std::string peer_id = PEER_ID;
+void PeerDownloadHelper::performBitTorrentHandshakeWithPeers(
+    const std::string &info_hash) {
 
-  std::for_each(
-      std::execution::par, peerList.begin(), peerList.end(), [&](auto &&peer) {
-        peer.connect(); // perform tcp connection
-        if (peer.isTcpConnected()) {
-          peer.performBitTorrentHandshake(pstr, pstrlen, info_hash, peer_id);
-        }
-      });
-  return 0;
+  std::for_each(std::execution::par, peerList.begin(), peerList.end(),
+                [&](auto &&peer) {
+                  peer.connectWithRetries(3); // perform tcp connection
+                  if (peer.getState() == CONNECTED) {
+                    peer.performBitTorrentHandshake(info_hash);
+                  }
+                });
 }
+
+void PeerDownloadHelper::cleanupFailedConnections() {
+  size_t count = 0;
+  for (std::vector<Peer>::iterator peer = peerList.begin();
+       peer != peerList.end();) {
+    if (peer->getState() == FAILED || peer->getState() == HANDSHAKE_FAILED) {
+      peer = peerList.erase(peer);
+      count++;
+    } else
+      ++peer;
+  }
+  std::cout << "Cleaned " << count << " Connections\n";
+  std::cout << "New states in peerList:\n";
+  for (std::vector<Peer>::iterator peer = peerList.begin();
+       peer != peerList.end();) {
+    std::cout << peer->getState() << std::endl;
+  }
+}
+
+void PeerDownloadHelper::startDownloadLoop() {}

@@ -17,16 +17,17 @@ int main(int argc, char *argv[]) {
     std::cerr << "Usage: " << argv[0] << "<torrent file path>" << std::endl;
     return 1;
   }
-  TorrentHelper helper;
+
+  TorrentHelper torrent_helper;
   try{
-    bool success = helper.parseTorrentFile(argv[1]);
+    bool success = torrent_helper.parseTorrentFile(argv[1]);
     if(success){
-      NetworkManager nw;
-      json peer_data = helper.getPeers(nw);
-      size_t interval = helper.getInterval();
+      json peer_data = torrent_helper.getPeers();
+      size_t interval = torrent_helper.getInterval();
       
       PeerDownloadHelper peer_helper(peer_data);
-      peer_helper.performBitTorrentHandshakeWithPeers(nw, helper.getInfoHash());
+      peer_helper.performBitTorrentHandshakeWithPeers(torrent_helper.getInfoHash());
+      //peer_helper.cleanUpFailedConnections();
       
     }
   }catch(std::runtime_error e){

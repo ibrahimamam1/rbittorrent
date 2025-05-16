@@ -3,9 +3,12 @@
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
+#include <memory>
 
 namespace beast = boost::beast;
 namespace asio = boost::asio;
+
+enum CONNECTION_STATE{FAILED, NOT_CONNECTED, CONNECTED, HANDSHAKE_COMPLETE, HANDSHAKE_FAILED,TRANSFERING, WAITING};
 
 class Peer {
   std::string ip;
@@ -14,14 +17,15 @@ class Peer {
   bool am_interested;
   bool peer_choking;
   bool peer_interested;
-  bool tcp_connected;
+  CONNECTION_STATE state;
   static asio::io_context ioc;
-  beast::tcp_stream stream{ioc}; // tcp socket with peer
+  std::unique_ptr<beast::tcp_stream> stream; // tcp socket with peer
 
 public:
   Peer();
   Peer(const std::string &ip_, const size_t &port_);
-  Peer(const Peer& p);
+  Peer(Peer&& other) noexcept; // noexcept is important for vector optimizations
+  Peer& operator=(Peer&& other) noexcept;
 
   std::string getIp() const;
   size_t getPort() const;
@@ -30,9 +34,8 @@ public:
   bool getPeerChocking() const;
   bool getInterested() const;
 
-  void connect(); // establish tcp connection with peer
-  void performBitTorrentHandshake(const std::string& pstr, const size_t& pstrlen,
-                                  const std::string& peer_id,
-                                  const std::string& info_hash);
-  bool isTcpConnected()const;
+  void connectWithRetries(size_t retries_left); // establish tcp connection with peer
+  void performBitTorrentHandshake(const std::string& info_hash);
+  std::vector<unsigned char> makeHandshakeMessage(const std::string& info_hash, size_t& handshake_len);
+  CONNECTION_STATE getState()const;
 };

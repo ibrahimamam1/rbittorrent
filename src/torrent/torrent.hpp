@@ -29,7 +29,7 @@ class TorrentHelper{
   std::vector<std::pair<std::string, std::string>>Peers;
 public:
   bool parseTorrentFile(std::string filepath);
-  json getPeers(NetworkManager& nw);
+  json getPeers();
   std::string generatePeerId();
   size_t getInterval() const;
   std::string getInfoHash();

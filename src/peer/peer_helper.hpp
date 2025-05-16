@@ -11,5 +11,7 @@ class PeerDownloadHelper{
 public:
   PeerDownloadHelper();
   PeerDownloadHelper(json data);
-  size_t performBitTorrentHandshakeWithPeers(NetworkManager& nw, const std::string& info_hash); //returns the number of succesfull connections
+  void performBitTorrentHandshakeWithPeers(const std::string& info_hash); //returns the number of succesfull connections
+  void cleanupFailedConnections();
+  void startDownloadLoop();
 };
