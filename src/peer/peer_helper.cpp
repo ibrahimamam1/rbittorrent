@@ -10,7 +10,7 @@ PeerDownloadHelper::PeerDownloadHelper() {}
 
 PeerDownloadHelper::PeerDownloadHelper(json data) {
   for (auto &peer : data) {
-    Peer p(peer["ip"], peer["port"]);
+    Peer p(ioc, peer["ip"], peer["port"]);
     peerList.push_back(std::move(p));
   }
 }
@@ -19,14 +19,20 @@ PeerDownloadHelper::PeerDownloadHelper(json data) {
 // return number of successfull connections
 void PeerDownloadHelper::performBitTorrentHandshakeWithPeers(
     const std::string &info_hash) {
+  for (auto &peer : peerList) {
+    peer.connectWithRetries(3, [&]() {
+      if (peer.getState() == CONNECTED)
+        peer.performBitTorrentHandshake(info_hash);
+      if (peer.getState() == HANDSHAKE_COMPLETE)
+        std::cout << "Handshake complete with: " << peer.getIp() << std::endl;
+      else if (peer.getState() == HANDSHAKE_FAILED)
+        std::cout << "Handshake Failed with: " << peer.getIp() << std::endl;
+    });
+  } // perform tcp connection
 
-  std::for_each(std::execution::par, peerList.begin(), peerList.end(),
-                [&](auto &&peer) {
-                  peer.connectWithRetries(3); // perform tcp connection
-                  if (peer.getState() == CONNECTED) {
-                    peer.performBitTorrentHandshake(info_hash);
-                  }
-                });
+  std::cout << "will run scheduled async ops\n";
+  ioc.run();
+  std::cout << "after will run scheduled async ops\n";
 }
 
 void PeerDownloadHelper::cleanupFailedConnections() {

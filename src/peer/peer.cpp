@@ -1,5 +1,7 @@
 #include "peer.hpp"
+#include "../torrent/torrent.hpp"
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
@@ -9,15 +11,13 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-asio::io_context Peer::ioc;
-#include "../torrent/torrent.hpp"
 
-Peer::Peer()
+Peer::Peer(asio::io_context &ioc)
     : ip(""), port(0), am_choking(false), am_interested(false),
       peer_choking(true), peer_interested(false), state(NOT_CONNECTED),
       stream(std::make_unique<beast::tcp_stream>(ioc)) {}
 
-Peer::Peer(const std::string &ip_, const size_t &port_)
+Peer::Peer(asio::io_context &ioc, const std::string &ip_, const size_t &port_)
     : ip(ip_), port(port_), am_choking(false), am_interested(false),
       peer_choking(true), peer_interested(false), state(NOT_CONNECTED),
       stream(std::make_unique<beast::tcp_stream>(ioc)) {}
@@ -58,20 +58,22 @@ bool Peer::getInterested() const { return peer_interested; }
 CONNECTION_STATE Peer::getState() const { return state; }
 
 // establish tcp connection with peer
-void Peer::connectWithRetries(size_t retries_left) {
+void Peer::connectWithRetries(size_t retries_left,
+                              const std::function<void()> onComplete) {
   try {
     // Parse IP address (throws boost::system::system_error if invalid)
     auto const ip_address = asio::ip::make_address(ip);
     tcp::endpoint endpoint(ip_address, port);
-
     // Connect (throws boost::system::system_error on failure)
     stream->async_connect(endpoint,
-                          [&](const boost::system::error_code& error) {
+                          [&](const boost::system::error_code &error) {
                             if (!error) {
                               state = CONNECTED;
+                              onComplete();
                               return;
                             }
-                            if(retries_left > 0) connectWithRetries(retries_left-1);
+                            if (retries_left > 0)
+                              connectWithRetries(retries_left - 1, onComplete);
                           });
   } catch (const boost::system::system_error &e) {
     state = FAILED;

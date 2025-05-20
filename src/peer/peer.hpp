@@ -18,12 +18,11 @@ class Peer {
   bool peer_choking;
   bool peer_interested;
   CONNECTION_STATE state;
-  static asio::io_context ioc;
   std::unique_ptr<beast::tcp_stream> stream; // tcp socket with peer
 
 public:
-  Peer();
-  Peer(const std::string &ip_, const size_t &port_);
+  Peer(asio::io_context& ioc);
+  Peer(asio::io_context& ioc, const std::string &ip_, const size_t &port_);
   Peer(Peer&& other) noexcept; // noexcept is important for vector optimizations
   Peer& operator=(Peer&& other) noexcept;
 
@@ -34,7 +33,7 @@ public:
   bool getPeerChocking() const;
   bool getInterested() const;
 
-  void connectWithRetries(size_t retries_left); // establish tcp connection with peer
+  void connectWithRetries(size_t retries_left, const std::function<void()>onComplete); // establish tcp connection with peer
   void performBitTorrentHandshake(const std::string& info_hash);
   std::vector<unsigned char> makeHandshakeMessage(const std::string& info_hash, size_t& handshake_len);
   CONNECTION_STATE getState()const;

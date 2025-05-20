@@ -19,18 +19,18 @@ int main(int argc, char *argv[]) {
   }
 
   TorrentHelper torrent_helper;
-  try{
+  try {
     bool success = torrent_helper.parseTorrentFile(argv[1]);
-    if(success){
+    if (success) {
       json peer_data = torrent_helper.getPeers();
       size_t interval = torrent_helper.getInterval();
-      
+
       PeerDownloadHelper peer_helper(peer_data);
-      peer_helper.performBitTorrentHandshakeWithPeers(torrent_helper.getInfoHash());
-      //peer_helper.cleanUpFailedConnections();
-      
+      peer_helper.performBitTorrentHandshakeWithPeers(
+          torrent_helper.getInfoHash());
+      // peer_helper.cleanUpFailedConnections();
     }
-  }catch(std::runtime_error e){
+  } catch (std::runtime_error e) {
     std::cerr << e.what() << std::endl;
     exit(1);
   }
