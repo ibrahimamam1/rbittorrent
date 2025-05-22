@@ -1,13 +1,12 @@
 #include "../torrent/torrent.hpp"
 #include "peer.hpp"
-#include "../network/network_manager.hpp"
 #include <boost/asio/io_context.hpp>
 #include <vector>
-
+#include <atomic>
 
 class PeerDownloadHelper{
-  std::vector<Peer>peerList;
-  boost::asio::io_context ioc;  
+  std::vector<std::shared_ptr<Peer>>peerList;
+  boost::asio::io_context ioc;
 
 public:
   PeerDownloadHelper();

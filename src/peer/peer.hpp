@@ -10,7 +10,7 @@ namespace asio = boost::asio;
 
 enum CONNECTION_STATE{FAILED, NOT_CONNECTED, CONNECTED, HANDSHAKE_COMPLETE, HANDSHAKE_FAILED,TRANSFERING, WAITING};
 
-class Peer {
+class Peer : public std::enable_shared_from_this<Peer> {
   std::string ip;
   size_t port;
   bool am_choking;
@@ -32,9 +32,12 @@ public:
   bool getAmInterested() const;
   bool getPeerChocking() const;
   bool getInterested() const;
+  void setState(const CONNECTION_STATE state_){ state = state_; }
 
-  void connectWithRetries(size_t retries_left, const std::function<void()>onComplete); // establish tcp connection with peer
-  void performBitTorrentHandshake(const std::string& info_hash);
+  void connectWithRetries(size_t retries_left,
+                          const std::string& info_hash,
+                          const std::function<void(CONNECTION_STATE)> callback); // establish tcp connection with peer
+  void performBitTorrentHandshake(const std::string& info_hash, const std::function<void(CONNECTION_STATE)>callback);
   std::vector<unsigned char> makeHandshakeMessage(const std::string& info_hash, size_t& handshake_len);
   CONNECTION_STATE getState()const;
 };

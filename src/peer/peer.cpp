@@ -3,10 +3,13 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/system/detail/error_code.hpp>
+#include <chrono>
 #include <exception>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -58,73 +61,117 @@ bool Peer::getInterested() const { return peer_interested; }
 CONNECTION_STATE Peer::getState() const { return state; }
 
 // establish tcp connection with peer
-void Peer::connectWithRetries(size_t retries_left,
-                              const std::function<void()> onComplete) {
+void Peer::connectWithRetries(
+    size_t retries_left, const std::string &info_hash,
+    const std::function<void(CONNECTION_STATE state)> callback) {
   try {
     // Parse IP address (throws boost::system::system_error if invalid)
     auto const ip_address = asio::ip::make_address(ip);
     tcp::endpoint endpoint(ip_address, port);
-    // Connect (throws boost::system::system_error on failure)
-    stream->async_connect(endpoint,
-                          [&](const boost::system::error_code &error) {
-                            if (!error) {
-                              state = CONNECTED;
-                              onComplete();
-                              return;
-                            }
-                            if (retries_left > 0)
-                              connectWithRetries(retries_left - 1, onComplete);
-                          });
+
+    // make a shared pointer of this object
+    // to extend it's lifetime
+    // and ensure it is valid during async operation
+    auto self = shared_from_this();
+    stream->async_connect(
+        endpoint, [this, self, retries_left, callback,
+                   info_hash](const boost::system::error_code &error) {
+          if (!error) {
+            state = CONNECTED;
+            if (callback) {
+              callback(CONNECTED);
+            }
+            performBitTorrentHandshake(info_hash, callback);
+            return;
+          }
+
+          if (retries_left > 0) {
+            // wait a tad before retrying
+            // that's basic etiquette
+            // maybe the other peer is busy who knows
+            auto timer = std::make_shared<asio::steady_timer>(
+                stream->get_executor(), std::chrono::milliseconds(500));
+            timer->async_wait([this, self, retries_left, info_hash,
+                               callback](const boost::system::error_code &) {
+              connectWithRetries(retries_left - 1, info_hash, callback);
+            });
+          } else {
+            state = FAILED;
+            if (callback) {
+              callback(FAILED);
+            }
+          }
+        });
   } catch (const boost::system::system_error &e) {
     state = FAILED;
+    if (callback) {
+      callback(FAILED);
+    }
   } catch (const std::exception &e) {
     state = FAILED;
+    if (callback) {
+      callback(FAILED);
+    }
   }
 }
 
 // Perform BitTorrent Handshake
-void Peer::performBitTorrentHandshake(const std::string &info_hash) {
+void Peer::performBitTorrentHandshake(
+    const std::string &info_hash,
+    std::function<void(CONNECTION_STATE)> callback) {
   size_t handshake_len;
   std::vector<unsigned char> handshake_msg =
       makeHandshakeMessage(info_hash, handshake_len);
 
-  try {
-    // Write the handshake message to the stream
-    asio::write(*stream, asio::buffer(handshake_msg));
+  // make shared_ptr from this object
+  // to extend it lifetime
+  // necessary for async operations
+  auto self = shared_from_this();
 
-    // -- -Read the peer's handshake response ---
-    std::vector<unsigned char> response_buffer(
-        handshake_len); // Response should have the same length
+  // Write the handshake message to the stream
+  asio::async_write(
+      *(self->stream), asio::buffer(handshake_msg),
+      [self, callback, handshake_len, info_hash](
+          const boost::system::error_code &error, size_t bytes_received) {
+        if (error) {
+          self->state = HANDSHAKE_FAILED;
+          if (callback)
+            callback(HANDSHAKE_FAILED);
+          return;
+        }
 
-    // Read exactly handshake_len bytes
-    size_t bytes_read = asio::read(*stream, asio::buffer(response_buffer),
-                                   asio::transfer_exactly(handshake_len));
-    if (bytes_read != handshake_len) {
-      // This case should ideally not happen with transfer_exactly unless an
-      // error occurs before completion
-      std::cerr
-          << "Error: Did not receive complete handshake response. Expected "
-          << handshake_len << " bytes, got " << bytes_read << std::endl;
-      // Decide how to handle incomplete read (e.g., throw, return error code)
-      throw std::runtime_error("Incomplete handshake response received.");
-      state = HANDSHAKE_FAILED;
-    }
-    std::string received_info_hash(response_buffer.begin() + 1 + 19 + 8,
-                                   response_buffer.begin() + 1 + 19 + 8 + 20);
-    if (received_info_hash != info_hash) {
-      state = HANDSHAKE_FAILED;
-    } else {
-      state = HANDSHAKE_COMPLETE;
-    }
-  } catch (const boost::system::system_error &e) {
-    std::cerr << "Network error during handshake write: " << e.what() << " ("
-              << ip << ":" << port << ")" << std::endl;
-    state = HANDSHAKE_FAILED;
-  } catch (const std::exception &e) {
-    std::cerr << "Unexpected error during handshake write: " << e.what() << " ("
-              << ip << ":" << port << ")" << std::endl;
-    state = HANDSHAKE_FAILED;
-  }
+        // -- -Read the peer's handshake response ---
+        auto response_buffer_ptr = std::make_shared<std::vector<unsigned char>>(
+            handshake_len); // Response should have the same length
+
+        // Read exactly handshake_len bytes
+        asio::async_read(
+            *(self->stream), asio::buffer(*response_buffer_ptr),
+            [self, info_hash, response_buffer_ptr, callback](
+                const boost::system::error_code &error, size_t bytes_received) {
+              if (error) {
+                self->state = HANDSHAKE_FAILED;
+                if (callback) {
+                  callback(HANDSHAKE_FAILED);
+                }
+              } else {
+                std::string response(response_buffer_ptr->begin(),
+                                     response_buffer_ptr->end());
+                std::string received_info_hash(
+                    response_buffer_ptr->begin() + 1 + 19 + 8,
+                    response_buffer_ptr->begin() + 1 + 19 + 8 + 20);
+                if (received_info_hash != info_hash) {
+                  self->state = HANDSHAKE_FAILED;
+                  if (callback)
+                    callback(HANDSHAKE_FAILED);
+                } else {
+                  self->state = HANDSHAKE_COMPLETE;
+                  if (callback)
+                    callback(HANDSHAKE_COMPLETE);
+                }
+              }
+            });
+      });
 }
 
 std::vector<unsigned char>
