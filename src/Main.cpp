@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
       PeerDownloadHelper peer_helper(peer_data);
       peer_helper.performBitTorrentHandshakeWithPeers(
           torrent_helper.getInfoHash());
-      // peer_helper.cleanUpFailedConnections();
+      peer_helper.cleanupFailedConnections();
     }
   } catch (std::runtime_error e) {
     std::cerr << e.what() << std::endl;

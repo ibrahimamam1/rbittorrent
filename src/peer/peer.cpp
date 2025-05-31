@@ -76,6 +76,15 @@ void Peer::connectWithRetries(
     stream->async_connect(
         endpoint, [this, self, retries_left, callback,
                    info_hash](const boost::system::error_code &error) {
+          // Check if operation was cancelled
+          if (error == boost::asio::error::operation_aborted) {
+            state = FAILED;
+            if (callback) {
+              callback(FAILED);
+            }
+            return;
+          }
+
           if (!error) {
             state = CONNECTED;
             if (callback) {
@@ -91,10 +100,22 @@ void Peer::connectWithRetries(
             // maybe the other peer is busy who knows
             auto timer = std::make_shared<asio::steady_timer>(
                 stream->get_executor(), std::chrono::milliseconds(500));
-            timer->async_wait([this, self, retries_left, info_hash,
-                               callback](const boost::system::error_code &) {
-              connectWithRetries(retries_left - 1, info_hash, callback);
-            });
+            timer->async_wait(
+                [this, self, retries_left, info_hash,
+                 callback](const boost::system::error_code &timer_error) {
+                  // Check if timer was cancelled
+                  if (timer_error == boost::asio::error::operation_aborted) {
+                    state = FAILED;
+                    if (callback) {
+                      callback(FAILED);
+                    }
+                    return;
+                  }
+
+                  if (!timer_error) {
+                    connectWithRetries(retries_left - 1, info_hash, callback);
+                  }
+                });
           } else {
             state = FAILED;
             if (callback) {
@@ -120,19 +141,24 @@ void Peer::performBitTorrentHandshake(
     const std::string &info_hash,
     std::function<void(CONNECTION_STATE)> callback) {
   size_t handshake_len;
-  std::vector<unsigned char> handshake_msg =
-      makeHandshakeMessage(info_hash, handshake_len);
+  auto handshake_msg = std::make_shared<std::vector<unsigned char>>(
+      makeHandshakeMessage(info_hash, handshake_len));
 
-  // make shared_ptr from this object
-  // to extend it lifetime
-  // necessary for async operations
   auto self = shared_from_this();
 
   // Write the handshake message to the stream
   asio::async_write(
-      *(self->stream), asio::buffer(handshake_msg),
-      [self, callback, handshake_len, info_hash](
+      *(self->stream), asio::buffer(*handshake_msg),
+      [self, callback, handshake_len, handshake_msg, info_hash](
           const boost::system::error_code &error, size_t bytes_received) {
+        // Check for cancellation
+        if (error == boost::asio::error::operation_aborted) {
+          self->state = HANDSHAKE_FAILED;
+          if (callback)
+            callback(HANDSHAKE_FAILED);
+          return;
+        }
+
         if (error) {
           self->state = HANDSHAKE_FAILED;
           if (callback)
@@ -140,15 +166,23 @@ void Peer::performBitTorrentHandshake(
           return;
         }
 
-        // -- -Read the peer's handshake response ---
-        auto response_buffer_ptr = std::make_shared<std::vector<unsigned char>>(
-            handshake_len); // Response should have the same length
+        // Read the peer's handshake response
+        auto response_buffer_ptr =
+            std::make_shared<std::vector<unsigned char>>(handshake_len);
 
-        // Read exactly handshake_len bytes
         asio::async_read(
             *(self->stream), asio::buffer(*response_buffer_ptr),
             [self, info_hash, response_buffer_ptr, callback](
                 const boost::system::error_code &error, size_t bytes_received) {
+              // Check for cancellation
+              if (error == boost::asio::error::operation_aborted) {
+                self->state = HANDSHAKE_FAILED;
+                if (callback) {
+                  callback(HANDSHAKE_FAILED);
+                }
+                return;
+              }
+
               if (error) {
                 self->state = HANDSHAKE_FAILED;
                 if (callback) {

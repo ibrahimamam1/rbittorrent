@@ -1,17 +1,22 @@
+#pragma once
+
 #include "../torrent/torrent.hpp"
 #include "peer.hpp"
-#include <boost/asio/io_context.hpp>
-#include <vector>
 #include <atomic>
+#include <boost/asio/io_context.hpp>
+#include <memory>
+#include <vector>
 
-class PeerDownloadHelper{
-  std::vector<std::shared_ptr<Peer>>peerList;
+class PeerDownloadHelper {
   boost::asio::io_context ioc;
+  std::vector<std::shared_ptr<Peer>> peerList;
 
 public:
   PeerDownloadHelper();
   PeerDownloadHelper(json data);
-  void performBitTorrentHandshakeWithPeers(const std::string& info_hash); //returns the number of succesfull connections
+  void performBitTorrentHandshakeWithPeers(
+      const std::string
+          &info_hash); // returns the number of succesfull connections
   void cleanupFailedConnections();
-  void startDownloadLoop();
+  void startFileTransferLoop(const std::string &info_hash);
 };

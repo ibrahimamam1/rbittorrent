@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../network/network_manager.hpp"
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
@@ -18,20 +20,24 @@ class Peer : public std::enable_shared_from_this<Peer> {
   bool peer_choking;
   bool peer_interested;
   CONNECTION_STATE state;
-  std::unique_ptr<beast::tcp_stream> stream; // tcp socket with peer
+  std::unique_ptr<beast::tcp_stream> stream;// tcp socket with peer
 
 public:
   Peer(asio::io_context& ioc);
   Peer(asio::io_context& ioc, const std::string &ip_, const size_t &port_);
   Peer(Peer&& other) noexcept; // noexcept is important for vector optimizations
   Peer& operator=(Peer&& other) noexcept;
-
   std::string getIp() const;
   size_t getPort() const;
   bool getAmChoking() const;
   bool getAmInterested() const;
   bool getPeerChocking() const;
   bool getInterested() const;
+  beast::tcp_stream* getStream() const{ return stream.get(); }
+  void setAmInterested(bool value){ am_interested = value;}
+  void setPeerInterested(bool value){ peer_interested = value;}
+  void setAmChoking(bool value){ am_choking = value;}
+  void setPeerChoking(bool value){ peer_choking = value;}
   void setState(const CONNECTION_STATE state_){ state = state_; }
 
   void connectWithRetries(size_t retries_left,
