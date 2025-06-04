@@ -1,21 +1,17 @@
-#include "peer_helper.hpp"
-#include "../download/download_helper.hpp"
-#include <algorithm>
+#include "connection_helper.hpp"
 #include <atomic>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/detail/error_code.hpp>
 #include <chrono>
-#include <exception>
-#include <execution>
 #include <iostream>
 #include <memory>
-#include <mutex>
 
-PeerDownloadHelper::PeerDownloadHelper() {}
+    PeerConnectionHelper::PeerConnectionHelper() {
+}
 
-PeerDownloadHelper::PeerDownloadHelper(json data) {
+PeerConnectionHelper::PeerConnectionHelper(json data) {
   for (auto &peer : data) {
     Peer p(ioc, peer["ip"], peer["port"]);
     peerList.push_back(std::make_shared<Peer>(std::move(p)));
@@ -24,14 +20,17 @@ PeerDownloadHelper::PeerDownloadHelper(json data) {
 
 // perform bittorrent handshake with
 // all the clients in the PeerList
-void PeerDownloadHelper::performBitTorrentHandshakeWithPeers(
+// returns number of sucesfull connections
+size_t PeerConnectionHelper::performBitTorrentHandshakeWithPeers(
     const std::string &info_hash) {
   // keep track of active operations for synchronization
   std::shared_ptr<size_t> active_ops =
       std::make_shared<size_t>(peerList.size());
 
+  std::atomic<size_t> success = 0;
+
   // timeout timer for connection
-  // can't wait indefinitely for peer to connect
+  // can't wait indefinitely for a peer to connect
   auto timeout =
       std::make_shared<asio::steady_timer>(ioc, std::chrono::seconds(30));
   auto timeout_occured = std::make_shared<bool>(false);
@@ -40,20 +39,17 @@ void PeerDownloadHelper::performBitTorrentHandshakeWithPeers(
     peer->connectWithRetries(
         3, // maximum retry attempts
         info_hash,
-        [this, peer, active_ops, timeout,
-         timeout_occured](CONNECTION_STATE state) {
+        [this, peer, active_ops, timeout, timeout_occured,
+         &success](CONNECTION_STATE state) {
           if (state == CONNECTED) {
             peer->setState(CONNECTED);
           }
           if (state == HANDSHAKE_COMPLETE) {
             peer->setState(HANDSHAKE_COMPLETE);
-            std::cout << "Handshake complete with: " << peer->getIp()
-                      << std::endl;
             (*active_ops)--;
+            success++;
           } else if (state == HANDSHAKE_FAILED) {
             peer->setState(HANDSHAKE_FAILED);
-            std::cout << "Handshake Failed with: " << peer->getIp()
-                      << std::endl;
             (*active_ops)--;
           }
 
@@ -85,11 +81,10 @@ void PeerDownloadHelper::performBitTorrentHandshakeWithPeers(
       });
   // run the schedules operations
   ioc.run();
-  std::cout << "ioc.run() returned, active_ops final value: " << *active_ops
-            << std::endl;
+  return success;
 }
 
-void PeerDownloadHelper::cleanupFailedConnections() {
+void PeerConnectionHelper::cleanupFailedConnections() {
   std::cout << "Cleaning up failed connnections\n";
   size_t count = 0;
   for (std::vector<std::shared_ptr<Peer>>::iterator peer = peerList.begin();
@@ -105,6 +100,6 @@ void PeerDownloadHelper::cleanupFailedConnections() {
   std::cout << "Cleaned " << count << " Failed Connections\n";
 }
 
-void PeerDownloadHelper::startFileTransferLoop(const std::string &info_hash) {
+void PeerConnectionHelper::startFileTransferLoop(const std::string &info_hash) {
   std::cout << "Peer download Helper startFileTransferLoop\n";
 }

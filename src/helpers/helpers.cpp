@@ -78,3 +78,14 @@ std::vector<unsigned char> compute_sha1(const std::string& val) {
     SHA1(reinterpret_cast<const unsigned char*>(val.data()), val.length(), hash.data());
     return hash;
 }
+
+std::vector<unsigned char> intToBigEndianBytes(uint32_t value){
+  std::vector<unsigned char>bytes(4);
+
+  bytes[0] = (value >> 24) & 0xFF;
+  bytes[1] = (value >> 16) & 0xFF;
+  bytes[2] = (value >> 8) & 0xFF;
+  bytes[3] = value & 0xFF;
+
+  return bytes;
+}

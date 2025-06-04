@@ -1,6 +1,6 @@
 #include "bencode/decode.hpp"
-#include "network/network_manager.hpp"
-#include "peer/peer_helper.hpp"
+#include "peer/connection_helper.hpp"
+#include "peer/download_helper.hpp"
 #include "torrent/torrent.hpp"
 #include <cctype>
 #include <cstdlib>
@@ -25,10 +25,14 @@ int main(int argc, char *argv[]) {
       json peer_data = torrent_helper.getPeers();
       size_t interval = torrent_helper.getInterval();
 
-      PeerDownloadHelper peer_helper(peer_data);
-      peer_helper.performBitTorrentHandshakeWithPeers(
+      PeerConnectionHelper peer_helper(peer_data);
+      size_t success = peer_helper.performBitTorrentHandshakeWithPeers(
           torrent_helper.getInfoHash());
+      std::cout << "Succesfully Handshaked with " << success << " peers\n";
       peer_helper.cleanupFailedConnections();
+
+      DownloadHelper dlh;
+      dlh.startDownloadLoop(peer_helper.getPeerList());
     }
   } catch (std::runtime_error e) {
     std::cerr << e.what() << std::endl;
