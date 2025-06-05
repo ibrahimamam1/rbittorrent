@@ -23,6 +23,7 @@ PeerConnectionHelper::PeerConnectionHelper(json data) {
 // returns number of sucesfull connections
 size_t PeerConnectionHelper::performBitTorrentHandshakeWithPeers(
     const std::string &info_hash) {
+  std::cout << "Performing Handshake with Peers...\n";
   // keep track of active operations for synchronization
   std::shared_ptr<size_t> active_ops =
       std::make_shared<size_t>(peerList.size());
@@ -67,7 +68,6 @@ size_t PeerConnectionHelper::performBitTorrentHandshakeWithPeers(
       [this, active_ops, timeout_occured](boost::system::error_code error) {
         if (!error) {
           *timeout_occured = true;
-          std::cout << "Operation timeout after 30 seconds\n";
 
           // Cancel all pending operations on peer streams
           int i = 0;
@@ -85,7 +85,7 @@ size_t PeerConnectionHelper::performBitTorrentHandshakeWithPeers(
 }
 
 void PeerConnectionHelper::cleanupFailedConnections() {
-  std::cout << "Cleaning up failed connnections\n";
+  std::cout << "Cleaning up failed connnections...\n";
   size_t count = 0;
   for (std::vector<std::shared_ptr<Peer>>::iterator peer = peerList.begin();
        peer != peerList.end();) {
@@ -97,9 +97,5 @@ void PeerConnectionHelper::cleanupFailedConnections() {
     } else
       ++peer;
   }
-  std::cout << "Cleaned " << count << " Failed Connections\n";
 }
 
-void PeerConnectionHelper::startFileTransferLoop(const std::string &info_hash) {
-  std::cout << "Peer download Helper startFileTransferLoop\n";
-}

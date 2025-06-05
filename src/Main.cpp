@@ -24,15 +24,16 @@ int main(int argc, char *argv[]) {
     if (success) {
       json peer_data = torrent_helper.getPeers();
       size_t interval = torrent_helper.getInterval();
+      size_t totalSize = torrent_helper.getTotalSize();
+      size_t numberOfPieces = torrent_helper.getNumberOfPieces();
 
       PeerConnectionHelper peer_helper(peer_data);
       size_t success = peer_helper.performBitTorrentHandshakeWithPeers(
           torrent_helper.getInfoHash());
-      std::cout << "Succesfully Handshaked with " << success << " peers\n";
       peer_helper.cleanupFailedConnections();
 
-      DownloadHelper dlh;
-      dlh.startDownloadLoop(peer_helper.getPeerList());
+      DownloadHelper dlh(peer_helper.getPeerList(), totalSize, numberOfPieces);
+      dlh.startDownloadLoop();
     }
   } catch (std::runtime_error e) {
     std::cerr << e.what() << std::endl;

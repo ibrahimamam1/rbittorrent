@@ -18,6 +18,7 @@ using json = nlohmann::json;
 namespace http = boost::beast::http;
 
 bool TorrentHelper::parseTorrentFile(std::string filepath) {
+  std::cout << "Parsing Torrent file...\n";
   std::ifstream file(filepath, std::ios::ate);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open file " + filepath);
@@ -68,6 +69,26 @@ bool TorrentHelper::parseTorrentFile(std::string filepath) {
 
     if (infoDictionary.contains("length")) {
       length = infoDictionary["length"];
+    } else if (infoDictionary.contains("files")) {
+      // Multi-file torrent - sum up all file lengths
+      length = 0;
+      json filesList = infoDictionary["files"];
+
+      if (!filesList.is_array()) {
+        throw std::runtime_error(
+            "Invalid Torrent File: Files field is not an array");
+      }
+
+      for (const auto &fileEntry : filesList) {
+        if (!fileEntry.contains("length")) {
+          throw std::runtime_error(
+              "Invalid Torrent File: File entry missing length field");
+        }
+        length += fileEntry["length"].get<long long>();
+      }
+    } else {
+      throw std::runtime_error(
+          "Invalid Torrent File: Missing both length and files fields");
     }
 
   } catch (std::runtime_error e) {
@@ -79,6 +100,7 @@ bool TorrentHelper::parseTorrentFile(std::string filepath) {
 }
 
 json TorrentHelper::getPeers() {
+  std::cout << "Downloading Peer Information\n";
   // Compute SHA1 of info hash
   std::string info_hash = getInfoHash();
   // prepare parameters
@@ -134,3 +156,5 @@ std::string TorrentHelper::getInfoHash() {
 }
 
 size_t TorrentHelper::getInterval() const { return interval; }
+size_t TorrentHelper::getTotalSize() const {return length; }
+size_t TorrentHelper::getNumberOfPieces() const {return length/piece_length; }

@@ -32,6 +32,8 @@ public:
   json getPeers();
   std::string generatePeerId();
   size_t getInterval() const;
+  size_t getTotalSize() const;
+  size_t getNumberOfPieces() const;
   std::string getInfoHash();
 };
 

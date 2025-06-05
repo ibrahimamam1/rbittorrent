@@ -17,6 +17,5 @@ public:
       const std::string
           &info_hash); // returns the number of succesfull connections
   void cleanupFailedConnections();
-  void startFileTransferLoop(const std::string &info_hash);
   std::vector<std::shared_ptr<Peer>>& getPeerList() {return peerList;}
 };

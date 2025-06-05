@@ -100,7 +100,7 @@ NetworkManager::makeGetRequest(const std::string &uri, parameterList params) {
   return res;
 }
 std::vector<unsigned char>
-NetworkManager::writeToStream(beast::tcp_stream& stream_,
+NetworkManager::writeToStream(beast::tcp_stream &stream_,
                               const std::vector<unsigned char> &data) {
 
   boost::system::error_code ec;
@@ -179,7 +179,7 @@ NetworkManager::writeToStream(beast::tcp_stream& stream_,
 
 // Alternative method for cases where you don't expect a response
 void NetworkManager::writeToStreamNoResponse(
-    beast::tcp_stream& stream_, const std::vector<unsigned char> &data) {
+    beast::tcp_stream &stream_, const std::vector<unsigned char> &data) {
 
   boost::system::error_code ec;
 
@@ -223,9 +223,6 @@ NetworkManager::readFromStream(beast::tcp_stream &stream_) {
   message_length |= (static_cast<uint32_t>(length_buffer[2]) << 8);
   message_length |= static_cast<uint32_t>(length_buffer[3]);
 
-  std::cout << "Expected message length: " << message_length << " bytes"
-            << std::endl;
-
   // Add length prefix to response
   response.insert(response.end(), length_buffer.begin(), length_buffer.end());
 
@@ -251,9 +248,5 @@ NetworkManager::readFromStream(beast::tcp_stream &stream_) {
 
   // Add message content to response
   response.insert(response.end(), message_buffer.begin(), message_buffer.end());
-
-  std::cout << "Successfully read complete message: " << response.size()
-            << " bytes total" << std::endl;
-
   return response;
 }
