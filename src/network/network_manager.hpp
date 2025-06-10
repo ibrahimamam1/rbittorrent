@@ -26,11 +26,12 @@ class NetworkManager {
 public:
   http::response<http::dynamic_body> makeGetRequest(const std::string &uri,
                                                     parameterList params);
-  std::vector<unsigned char>
+  void
   writeToStream(beast::tcp_stream &stream,
                 const std::vector<unsigned char> &data);
   void writeToStreamNoResponse(beast::tcp_stream& stream_,
                                const std::vector<unsigned char> &data);
 
-  std::vector<unsigned char> readFromStream(beast::tcp_stream& stream_);
+  std::vector<unsigned char> readFromStream(beast::tcp_stream& stream_, size_t bytes_to_read);
+  void clearStreamBuffer(beast::tcp_stream& stream);
 };

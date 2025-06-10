@@ -4,10 +4,12 @@
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
+#include <vector>
 
 namespace beast = boost::beast;
+enum MESSAGE_TYPE{KEEP_ALIVE, BITFIELD,CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED, HAVE, REQUEST, CANCEL};
 class MessageHelper{
-
+public:
   void sendKeepAliveMessage(beast::tcp_stream &stream);
   void sendChokeMessage(beast::tcp_stream &stream);
   void sendUnchokeMessage(beast::tcp_stream &stream);
@@ -21,9 +23,11 @@ class MessageHelper{
 
   void sendPiece(beast::tcp_stream &stream, const uint32_t piece_index,
                  const uint32_t offset, const std::vector<unsigned char> data);
+  bool hasMessage(beast::tcp_stream& stream); 
+  std::vector<unsigned char>readResponse(beast::tcp_stream& stream);
+  MESSAGE_TYPE getResponseType(std::vector<unsigned char> response);
 
-
-public:
+private:
 void
   sendMessage(beast::tcp_stream &stream, const uint32_t len_prefix,
               const uint16_t id,

@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 namespace beast = boost::beast;
 namespace asio = boost::asio;
@@ -21,6 +22,7 @@ class Peer : public std::enable_shared_from_this<Peer> {
   bool peer_interested;
   CONNECTION_STATE state;
   std::unique_ptr<beast::tcp_stream> stream;// tcp socket with peer
+  std::vector<int>bit_field;
 
 public:
   Peer(asio::io_context& ioc);
@@ -33,12 +35,15 @@ public:
   bool getAmInterested() const;
   bool getPeerChocking() const;
   bool getInterested() const;
+  bool hasPiece(const size_t idx) const{ return bit_field[idx]; }
   beast::tcp_stream* getStream() const{ return stream.get(); }
   void setAmInterested(bool value){ am_interested = value;}
   void setPeerInterested(bool value){ peer_interested = value;}
   void setAmChoking(bool value){ am_choking = value;}
   void setPeerChoking(bool value){ peer_choking = value;}
   void setState(const CONNECTION_STATE state_){ state = state_; }
+  void setHasPiece(const size_t idx, const size_t value) {bit_field[idx] = value;}
+  void initBitfield(const size_t number_of_pieces){bit_field.resize(number_of_pieces);}
 
   void connectWithRetries(size_t retries_left,
                           const std::string& info_hash,

@@ -16,12 +16,12 @@
 #include <vector>
 
 Peer::Peer(asio::io_context &ioc)
-    : ip(""), port(0), am_choking(false), am_interested(false),
+    : ip(""), port(0), am_choking(true), am_interested(false),
       peer_choking(true), peer_interested(false), state(NOT_CONNECTED),
       stream(std::make_unique<beast::tcp_stream>(ioc)) {}
 
 Peer::Peer(asio::io_context &ioc, const std::string &ip_, const size_t &port_)
-    : ip(ip_), port(port_), am_choking(false), am_interested(false),
+    : ip(ip_), port(port_), am_choking(true), am_interested(false),
       peer_choking(true), peer_interested(false), state(NOT_CONNECTED),
       stream(std::make_unique<beast::tcp_stream>(ioc)) {}
 

@@ -1,11 +1,14 @@
 #include "message_helper.hpp"
-#include "../network/network_manager.hpp"
 #include "../helpers/helpers.hpp"
+#include "../network/network_manager.hpp"
+#include <boost/beast/core/tcp_stream.hpp>
 #include <iostream>
+#include <stdexcept>
+#include <vector>
 
 void MessageHelper::sendMessage(beast::tcp_stream &stream,
-                                 const uint32_t len_prefix, const uint16_t id,
-                                 std::vector<unsigned char> payload) {
+                                const uint32_t len_prefix, const uint16_t id,
+                                std::vector<unsigned char> payload) {
   // prepare data to transfer
   std::vector<unsigned char> data;
 
@@ -20,10 +23,11 @@ void MessageHelper::sendMessage(beast::tcp_stream &stream,
   data.insert(data.end(), payload.begin(), payload.end());
 
   NetworkManager nm;
-  std::vector<unsigned char> response = nm.writeToStream(stream, data);
-
-  std::string str(response.begin(), response.end());
-  std::cout << str << std::endl;
+  try{
+    nm.writeToStream(stream, data);}
+  catch(std::exception e){
+    std::cout << e.what() << std::endl;
+  }
 }
 
 void MessageHelper::sendKeepAliveMessage(beast::tcp_stream &stream) {
@@ -62,7 +66,7 @@ void MessageHelper::sendAmNotInterestedMessage(beast::tcp_stream &stream) {
 }
 
 void MessageHelper::sendHaveMessage(beast::tcp_stream &stream,
-                                     const uint32_t piece_index) {
+                                    const uint32_t piece_index) {
   // length prefix = 0005
   // id = 4
   // payload = zero based piece index
@@ -71,9 +75,9 @@ void MessageHelper::sendHaveMessage(beast::tcp_stream &stream,
 }
 
 void MessageHelper::sendRequestMessage(beast::tcp_stream &stream,
-                                        const uint32_t piece_index,
-                                        const uint32_t offset,
-                                        const uint32_t piece_length) {
+                                       const uint32_t piece_index,
+                                       const uint32_t offset,
+                                       const uint32_t piece_length) {
   // length prefix = 0013
   // id = 6
   // payload = <zero based piece index><offset within the piece><length of
@@ -93,9 +97,8 @@ void MessageHelper::sendRequestMessage(beast::tcp_stream &stream,
 }
 
 void MessageHelper::sendPiece(beast::tcp_stream &stream,
-                               const uint32_t piece_index,
-                               const uint32_t offset,
-                               const std::vector<unsigned char> data) {
+                              const uint32_t piece_index, const uint32_t offset,
+                              const std::vector<unsigned char> data) {
   // length prefix = variable
   // id = 7
   // payload = <zero based piece index><offset within the piece><data>
@@ -113,8 +116,8 @@ void MessageHelper::sendPiece(beast::tcp_stream &stream,
 }
 
 void MessageHelper::sendCancelMessage(beast::tcp_stream &stream,
-                                       uint32_t pieceIndex, uint32_t offset,
-                                       uint32_t length) {
+                                      uint32_t pieceIndex, uint32_t offset,
+                                      uint32_t length) {
   // length prefix = 13 (1 byte for ID + 4 + 4 + 4 bytes for payload)
   // id = 8
   // payload = <piece index><offset><length> (each 4 bytes, big-endian)
@@ -129,4 +132,84 @@ void MessageHelper::sendCancelMessage(beast::tcp_stream &stream,
   payload.insert(payload.end(), lengthBytes.begin(), lengthBytes.end());
 
   sendMessage(stream, 13, 8, payload);
+}
+
+std::vector<unsigned char>
+MessageHelper::readResponse(beast::tcp_stream &stream) {
+  NetworkManager nm;
+  std::vector<unsigned char> response;
+  // read length prefix
+  std::vector<unsigned char> length_buffer =
+      nm.readFromStream(stream, 4); // bytes to read = 4
+
+  // Parse message length from big-endian 4-byte integer
+  uint32_t message_length = 0;
+  message_length |= (static_cast<uint32_t>(length_buffer[0]) << 24);
+  message_length |= (static_cast<uint32_t>(length_buffer[1]) << 16);
+  message_length |= (static_cast<uint32_t>(length_buffer[2]) << 8);
+  message_length |= static_cast<uint32_t>(length_buffer[3]);
+
+  // Add length prefix to response
+  response.insert(response.end(), length_buffer.begin(), length_buffer.end());
+
+  // Read the actual message content
+  std::vector<unsigned char> message_buffer =
+      nm.readFromStream(stream, message_length);
+
+  // Add message content to response
+  response.insert(response.end(), message_buffer.begin(), message_buffer.end());
+  return response;
+}
+
+MESSAGE_TYPE
+MessageHelper::getResponseType(std::vector<unsigned char> response) {
+  // Handle keep-alive message (length = 0)
+  if (response.size() < 4) {
+    throw std::invalid_argument("Invalid Message: too short");
+  }
+
+  // Extract length from first 4 bytes (big-endian)
+  uint32_t length = (response[0] << 24) | (response[1] << 16) |
+                    (response[2] << 8) | response[3];
+
+  // Keep-alive message has length 0
+  if (length == 0) {
+    return KEEP_ALIVE;
+  }
+
+  // Check if we have enough bytes for the message type
+  if (response.size() < 5) {
+    throw std::invalid_argument("Invalid Message: missing id");
+  }
+
+  // Message type is the 5th byte (index 4)
+  unsigned char messageId = response[4];
+
+  switch (messageId) {
+  case 0:
+    std::cout << "type = choke\n";
+    return CHOKE;
+  case 1:
+    return UNCHOKE;
+  case 2:
+    std::cout << "type = Interested\n";
+    return INTERESTED;
+  case 3:
+    std::cout << "type = Not Interested\n";
+    return NOT_INTERESTED;
+  case 4:
+    std::cout << "type = Have\n";
+    return HAVE;
+  case 5:
+    std::cout << "type = request\n";
+    return REQUEST;
+  case 6:
+    std::cout << "type = Cancel\n";
+    return CANCEL;
+  default:
+    std::cout << "type = Unknown\n";
+    // For unknown message types, return keep-alive as fallback
+    throw std::invalid_argument("Unknown message type: " +
+                                std::to_string(messageId));
+  }
 }
