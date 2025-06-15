@@ -259,3 +259,8 @@ Peer::makeHandshakeMessage(const std::string &info_hash,
   std::copy(peer_id.begin(), peer_id.end(), handshake_msg.begin() + offset);
   return handshake_msg;
 }
+
+void Peer::closeConnection(){
+  stream->close();
+  state = NOT_CONNECTED;
+}

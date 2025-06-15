@@ -10,10 +10,14 @@ public:
   void startDownloadLoop();
   void sendInterestedMessageToAllPeers();
   void handlePeerMessages();
+  bool peerHasNeededPiece(Peer&);
+  int findBestPiece(std::vector<int>bit_field);
 private:
   PeerList peers;
   size_t total_size;
   size_t number_of_pieces;
   bool download_complete;
-  size_t active_peers;
+  size_t num_active_peers;
+  PeerList active_peers;
+  std::vector<int>my_bitfield;
   };

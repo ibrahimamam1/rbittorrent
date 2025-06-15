@@ -35,6 +35,7 @@ public:
   bool getAmInterested() const;
   bool getPeerChocking() const;
   bool getInterested() const;
+  std::vector<int> getBitfield() const {return bit_field; }
   bool hasPiece(const size_t idx) const{ return bit_field[idx]; }
   beast::tcp_stream* getStream() const{ return stream.get(); }
   void setAmInterested(bool value){ am_interested = value;}
@@ -44,7 +45,7 @@ public:
   void setState(const CONNECTION_STATE state_){ state = state_; }
   void setHasPiece(const size_t idx, const size_t value) {bit_field[idx] = value;}
   void initBitfield(const size_t number_of_pieces){bit_field.resize(number_of_pieces);}
-
+  void closeConnection();
   void connectWithRetries(size_t retries_left,
                           const std::string& info_hash,
                           const std::function<void(CONNECTION_STATE)> callback); // establish tcp connection with peer

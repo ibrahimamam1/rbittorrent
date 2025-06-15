@@ -23,9 +23,9 @@ void MessageHelper::sendMessage(beast::tcp_stream &stream,
   data.insert(data.end(), payload.begin(), payload.end());
 
   NetworkManager nm;
-  try{
-    nm.writeToStream(stream, data);}
-  catch(std::exception e){
+  try {
+    nm.writeToStream(stream, data);
+  } catch (std::exception e) {
     std::cout << e.what() << std::endl;
   }
 }
@@ -167,49 +167,49 @@ MessageHelper::getResponseType(std::vector<unsigned char> response) {
   if (response.size() < 4) {
     throw std::invalid_argument("Invalid Message: too short");
   }
-
+  
   // Extract length from first 4 bytes (big-endian)
   uint32_t length = (response[0] << 24) | (response[1] << 16) |
                     (response[2] << 8) | response[3];
-
+  
   // Keep-alive message has length 0
   if (length == 0) {
     return KEEP_ALIVE;
   }
-
+  
   // Check if we have enough bytes for the message type
   if (response.size() < 5) {
     throw std::invalid_argument("Invalid Message: missing id");
   }
-
+  
   // Message type is the 5th byte (index 4)
   unsigned char messageId = response[4];
-
+  
   switch (messageId) {
   case 0:
-    std::cout << "type = choke\n";
     return CHOKE;
   case 1:
     return UNCHOKE;
   case 2:
-    std::cout << "type = Interested\n";
     return INTERESTED;
   case 3:
-    std::cout << "type = Not Interested\n";
     return NOT_INTERESTED;
   case 4:
-    std::cout << "type = Have\n";
     return HAVE;
   case 5:
-    std::cout << "type = request\n";
-    return REQUEST;
+    return BITFIELD;
   case 6:
-    std::cout << "type = Cancel\n";
+    return REQUEST;
+  case 7:
+    return PIECE;
+  case 8:
     return CANCEL;
   default:
-    std::cout << "type = Unknown\n";
-    // For unknown message types, return keep-alive as fallback
+    std::cout << "type = unknown (ID: " << static_cast<int>(messageId) << ")\n";
     throw std::invalid_argument("Unknown message type: " +
                                 std::to_string(messageId));
   }
+}
+bool MessageHelper::hasMessage(beast::tcp_stream &stream) {
+  return stream.socket().available() > 0;
 }

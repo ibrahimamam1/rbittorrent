@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace beast = boost::beast;
-enum MESSAGE_TYPE{KEEP_ALIVE, BITFIELD,CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED, HAVE, REQUEST, CANCEL};
+enum MESSAGE_TYPE{KEEP_ALIVE, BITFIELD,CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED, HAVE, REQUEST, CANCEL, PIECE};
 class MessageHelper{
 public:
   void sendKeepAliveMessage(beast::tcp_stream &stream);
