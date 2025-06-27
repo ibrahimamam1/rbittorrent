@@ -4,7 +4,9 @@
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
+#include <memory>
 #include <vector>
+#include "../peer/peer.hpp"
 
 namespace beast = boost::beast;
 enum MESSAGE_TYPE{KEEP_ALIVE, BITFIELD,CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED, HAVE, REQUEST, CANCEL, PIECE};
@@ -23,8 +25,8 @@ public:
 
   void sendPiece(beast::tcp_stream &stream, const uint32_t piece_index,
                  const uint32_t offset, const std::vector<unsigned char> data);
-  bool hasMessage(beast::tcp_stream& stream); 
-  std::vector<unsigned char>readResponse(beast::tcp_stream& stream);
+ 
+std::vector<unsigned char> readMessage(std::shared_ptr<Peer> &peer, std::function<void(MESSAGE_TYPE, std::vector<unsigned char>&)>handleMessageCallback);
   MESSAGE_TYPE getResponseType(std::vector<unsigned char> response);
 
 private:

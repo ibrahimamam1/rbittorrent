@@ -1,4 +1,5 @@
 #include "peer.hpp"
+#include "../message/message_helper.hpp"
 #include "../torrent/torrent.hpp"
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/io_context.hpp>
@@ -264,3 +265,4 @@ void Peer::closeConnection(){
   stream->close();
   state = NOT_CONNECTED;
 }
+

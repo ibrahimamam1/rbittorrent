@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../network/network_manager.hpp"
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/asio.hpp>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -48,7 +48,8 @@ public:
   void closeConnection();
   void connectWithRetries(size_t retries_left,
                           const std::string& info_hash,
-                          const std::function<void(CONNECTION_STATE)> callback); // establish tcp connection with peer
+                          const std::function<void(CONNECTION_STATE)> callback);
+
   void performBitTorrentHandshake(const std::string& info_hash, const std::function<void(CONNECTION_STATE)>callback);
   std::vector<unsigned char> makeHandshakeMessage(const std::string& info_hash, size_t& handshake_len);
   CONNECTION_STATE getState()const;

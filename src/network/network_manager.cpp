@@ -137,3 +137,20 @@ NetworkManager::readFromStream(beast::tcp_stream &stream_,
   // Data is automatically consumed from stream buffer
   return response;
 }
+
+void NetworkManager::asyncReadFromStream(
+    beast::tcp_stream &stream_, size_t bytes_to_read,
+    std::function<void(boost::system::error_code, std::vector<unsigned char> &)>
+        callback) {
+
+  // Allocate buffer on heap to persist across async operation
+  auto buffer = std::make_shared<std::vector<unsigned char>>(bytes_to_read);
+
+  boost::asio::async_read(stream_,
+                          boost::asio::buffer(buffer->data(), bytes_to_read),
+                          boost::asio::transfer_exactly(bytes_to_read),
+                          [buffer, callback](boost::system::error_code ec,
+                                             std::size_t bytes_read) mutable {
+                            callback(ec, *buffer);
+                          });
+}

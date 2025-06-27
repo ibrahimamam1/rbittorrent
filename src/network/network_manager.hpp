@@ -5,6 +5,7 @@
 #include <boost/beast/core/error.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/http/dynamic_body_fwd.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <functional>
 #include <vector>
 
@@ -33,5 +34,8 @@ public:
                                const std::vector<unsigned char> &data);
 
   std::vector<unsigned char> readFromStream(beast::tcp_stream& stream_, size_t bytes_to_read);
-  void clearStreamBuffer(beast::tcp_stream& stream);
+  void asyncReadFromStream(
+    beast::tcp_stream &stream_, size_t bytes_to_read, std::function<void(boost::system::error_code, std::vector<unsigned char>&)>callback);
+
+ void clearStreamBuffer(beast::tcp_stream& stream);
 };

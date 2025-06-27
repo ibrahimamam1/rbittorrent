@@ -1,8 +1,12 @@
 #include "message_helper.hpp"
 #include "../helpers/helpers.hpp"
 #include "../network/network_manager.hpp"
+#include "../peer/peer.hpp"
 #include <boost/beast/core/tcp_stream.hpp>
+#include <boost/system/detail/error_code.hpp>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -134,31 +138,48 @@ void MessageHelper::sendCancelMessage(beast::tcp_stream &stream,
   sendMessage(stream, 13, 8, payload);
 }
 
-std::vector<unsigned char>
-MessageHelper::readResponse(beast::tcp_stream &stream) {
+std::vector<unsigned char> MessageHelper::readMessage(
+    std::shared_ptr<Peer> &peer,
+    std::function<void(MESSAGE_TYPE, std::vector<unsigned char>&)>
+        handleMessageCallback) {
   NetworkManager nm;
   std::vector<unsigned char> response;
+
   // read length prefix
-  std::vector<unsigned char> length_buffer =
-      nm.readFromStream(stream, 4); // bytes to read = 4
+  std::vector<unsigned char> prefix(4);
+  boost::system::error_code ec;
+  auto stream = peer->getStream();
+  // first read prefix of 4 bytes then read actual message
+  nm.asyncReadFromStream(
+      *stream, 4,
+      [this, &response, &nm, &stream,
+       &handleMessageCallback](boost::system::error_code ec,
+                               std::vector<unsigned char> length_buffer) {
+        // Parse message length from big-endian 4-byte integer
+        uint32_t message_length = 0;
+        message_length |= (static_cast<uint32_t>(length_buffer[0]) << 24);
+        message_length |= (static_cast<uint32_t>(length_buffer[1]) << 16);
+        message_length |= (static_cast<uint32_t>(length_buffer[2]) << 8);
+        message_length |= static_cast<uint32_t>(length_buffer[3]);
 
-  // Parse message length from big-endian 4-byte integer
-  uint32_t message_length = 0;
-  message_length |= (static_cast<uint32_t>(length_buffer[0]) << 24);
-  message_length |= (static_cast<uint32_t>(length_buffer[1]) << 16);
-  message_length |= (static_cast<uint32_t>(length_buffer[2]) << 8);
-  message_length |= static_cast<uint32_t>(length_buffer[3]);
+        // Add length prefix to response
+        response.insert(response.end(), length_buffer.begin(),
+                        length_buffer.end());
 
-  // Add length prefix to response
-  response.insert(response.end(), length_buffer.begin(), length_buffer.end());
+        // Read the actual message content
+        nm.asyncReadFromStream(*stream, message_length,
+                               [this, &response, &handleMessageCallback](
+                                   boost::system::error_code ec,
+                                   std::vector<unsigned char> message_buffer) {
+                                 // Add message content to response
+                                 response.insert(response.end(),
+                                                 message_buffer.begin(),
+                                                 message_buffer.end());
 
-  // Read the actual message content
-  std::vector<unsigned char> message_buffer =
-      nm.readFromStream(stream, message_length);
-
-  // Add message content to response
-  response.insert(response.end(), message_buffer.begin(), message_buffer.end());
-  return response;
+                                 auto type = this->getResponseType(response);
+                                 handleMessageCallback(type, response);
+                               });
+      });
 }
 
 MESSAGE_TYPE
@@ -167,24 +188,24 @@ MessageHelper::getResponseType(std::vector<unsigned char> response) {
   if (response.size() < 4) {
     throw std::invalid_argument("Invalid Message: too short");
   }
-  
+
   // Extract length from first 4 bytes (big-endian)
   uint32_t length = (response[0] << 24) | (response[1] << 16) |
                     (response[2] << 8) | response[3];
-  
+
   // Keep-alive message has length 0
   if (length == 0) {
     return KEEP_ALIVE;
   }
-  
+
   // Check if we have enough bytes for the message type
   if (response.size() < 5) {
     throw std::invalid_argument("Invalid Message: missing id");
   }
-  
+
   // Message type is the 5th byte (index 4)
   unsigned char messageId = response[4];
-  
+
   switch (messageId) {
   case 0:
     return CHOKE;
@@ -209,7 +230,4 @@ MessageHelper::getResponseType(std::vector<unsigned char> response) {
     throw std::invalid_argument("Unknown message type: " +
                                 std::to_string(messageId));
   }
-}
-bool MessageHelper::hasMessage(beast::tcp_stream &stream) {
-  return stream.socket().available() > 0;
 }
