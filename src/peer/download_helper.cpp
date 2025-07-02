@@ -16,14 +16,16 @@ DownloadHelper::DownloadHelper(PeerList &peers_, const size_t total_size_,
 
 void DownloadHelper::startDownloadLoop() {
   MessageHelper mh;
-  asio::io_context ioc;
+  std::shared_ptr<asio::io_context> ioc = Peer::getIoc();
+  std::cout << "Before interating on peers\n";
   for (auto peer : peers) {
     mh.readMessage(peer, [this, &peer](MESSAGE_TYPE type,
                                        std::vector<unsigned char> &response) {
       handlePeerMessage(peer, type, response);
     });
   }
-  ioc.run();
+  std::cout << "After interating on peers\n";
+  ioc->run();
 }
 
 void DownloadHelper::handlePeerMessage(std::shared_ptr<Peer> &peer,

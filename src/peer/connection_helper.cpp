@@ -8,12 +8,11 @@
 #include <iostream>
 #include <memory>
 
-    PeerConnectionHelper::PeerConnectionHelper() {
-}
+PeerConnectionHelper::PeerConnectionHelper() {}
 
 PeerConnectionHelper::PeerConnectionHelper(json data) {
   for (auto &peer : data) {
-    Peer p(ioc, peer["ip"], peer["port"]);
+    Peer p(peer["ip"], peer["port"]);
     peerList.push_back(std::make_shared<Peer>(std::move(p)));
   }
 }
@@ -98,4 +97,3 @@ void PeerConnectionHelper::cleanupFailedConnections() {
       ++peer;
   }
 }
-

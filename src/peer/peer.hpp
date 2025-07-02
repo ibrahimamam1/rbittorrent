@@ -21,14 +21,18 @@ class Peer : public std::enable_shared_from_this<Peer> {
   bool peer_choking;
   bool peer_interested;
   CONNECTION_STATE state;
+  static std::shared_ptr<asio::io_context>ioc;
   std::unique_ptr<beast::tcp_stream> stream;// tcp socket with peer
   std::vector<int>bit_field;
 
 public:
-  Peer(asio::io_context& ioc);
-  Peer(asio::io_context& ioc, const std::string &ip_, const size_t &port_);
+  //constructors
+  Peer();
+  Peer(const std::string &ip_, const size_t &port_);
   Peer(Peer&& other) noexcept; // noexcept is important for vector optimizations
   Peer& operator=(Peer&& other) noexcept;
+
+  //getters
   std::string getIp() const;
   size_t getPort() const;
   bool getAmChoking() const;
@@ -38,12 +42,18 @@ public:
   std::vector<int> getBitfield() const {return bit_field; }
   bool hasPiece(const size_t idx) const{ return bit_field[idx]; }
   beast::tcp_stream* getStream() const{ return stream.get(); }
+  CONNECTION_STATE getState()const;
+  static std::shared_ptr<asio::io_context>getIoc() {return ioc;}
+
+  //setters
   void setAmInterested(bool value){ am_interested = value;}
   void setPeerInterested(bool value){ peer_interested = value;}
   void setAmChoking(bool value){ am_choking = value;}
   void setPeerChoking(bool value){ peer_choking = value;}
   void setState(const CONNECTION_STATE state_){ state = state_; }
   void setHasPiece(const size_t idx, const size_t value) {bit_field[idx] = value;}
+
+  //helper functions
   void initBitfield(const size_t number_of_pieces){bit_field.resize(number_of_pieces);}
   void closeConnection();
   void connectWithRetries(size_t retries_left,
@@ -52,5 +62,4 @@ public:
 
   void performBitTorrentHandshake(const std::string& info_hash, const std::function<void(CONNECTION_STATE)>callback);
   std::vector<unsigned char> makeHandshakeMessage(const std::string& info_hash, size_t& handshake_len);
-  CONNECTION_STATE getState()const;
 };

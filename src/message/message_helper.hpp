@@ -1,16 +1,27 @@
 #pragma once
 
-#include <boost/asio/io_context.hpp>
-#include <boost/beast/core/tcp_stream.hpp>
+#include "../peer/peer.hpp"
 #include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/beast.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
 #include <memory>
 #include <vector>
-#include "../peer/peer.hpp"
 
 namespace beast = boost::beast;
-enum MESSAGE_TYPE{KEEP_ALIVE, BITFIELD,CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED, HAVE, REQUEST, CANCEL, PIECE};
-class MessageHelper{
+enum MESSAGE_TYPE {
+  KEEP_ALIVE,
+  BITFIELD,
+  CHOKE,
+  UNCHOKE,
+  INTERESTED,
+  NOT_INTERESTED,
+  HAVE,
+  REQUEST,
+  CANCEL,
+  PIECE
+};
+class MessageHelper {
 public:
   void sendKeepAliveMessage(beast::tcp_stream &stream);
   void sendChokeMessage(beast::tcp_stream &stream);
@@ -25,16 +36,17 @@ public:
 
   void sendPiece(beast::tcp_stream &stream, const uint32_t piece_index,
                  const uint32_t offset, const std::vector<unsigned char> data);
- 
-std::vector<unsigned char> readMessage(std::shared_ptr<Peer> &peer, std::function<void(MESSAGE_TYPE, std::vector<unsigned char>&)>handleMessageCallback);
+
+  std::vector<unsigned char>
+  readMessage(std::shared_ptr<Peer> &peer,
+              std::function<void(MESSAGE_TYPE, std::vector<unsigned char> &)>
+                  handleMessageCallback);
   MESSAGE_TYPE getResponseType(std::vector<unsigned char> response);
 
 private:
-void
+  void
   sendMessage(beast::tcp_stream &stream, const uint32_t len_prefix,
               const uint16_t id,
               std::vector<unsigned char> payload =
                   std::vector<unsigned char>() = std::vector<unsigned char>());
-
-
 };

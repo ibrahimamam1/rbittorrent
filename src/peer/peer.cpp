@@ -16,15 +16,17 @@
 #include <memory>
 #include <vector>
 
-Peer::Peer(asio::io_context &ioc)
+std::shared_ptr<asio::io_context> Peer::ioc =
+    std::make_shared<asio::io_context>();
+Peer::Peer()
     : ip(""), port(0), am_choking(true), am_interested(false),
       peer_choking(true), peer_interested(false), state(NOT_CONNECTED),
-      stream(std::make_unique<beast::tcp_stream>(ioc)) {}
+      stream(std::make_unique<beast::tcp_stream>(*ioc)) {}
 
-Peer::Peer(asio::io_context &ioc, const std::string &ip_, const size_t &port_)
+Peer::Peer(const std::string &ip_, const size_t &port_)
     : ip(ip_), port(port_), am_choking(true), am_interested(false),
       peer_choking(true), peer_interested(false), state(NOT_CONNECTED),
-      stream(std::make_unique<beast::tcp_stream>(ioc)) {}
+      stream(std::make_unique<beast::tcp_stream>(*ioc)) {}
 
 // move constructor
 Peer::Peer(Peer &&other) noexcept
@@ -261,8 +263,7 @@ Peer::makeHandshakeMessage(const std::string &info_hash,
   return handshake_msg;
 }
 
-void Peer::closeConnection(){
+void Peer::closeConnection() {
   stream->close();
   state = NOT_CONNECTED;
 }
-

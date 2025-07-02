@@ -142,6 +142,7 @@ std::vector<unsigned char> MessageHelper::readMessage(
     std::shared_ptr<Peer> &peer,
     std::function<void(MESSAGE_TYPE, std::vector<unsigned char>&)>
         handleMessageCallback) {
+  std::cout << "In read message\n";
   NetworkManager nm;
   std::vector<unsigned char> response;
 
@@ -155,6 +156,7 @@ std::vector<unsigned char> MessageHelper::readMessage(
       [this, &response, &nm, &stream,
        &handleMessageCallback](boost::system::error_code ec,
                                std::vector<unsigned char> length_buffer) {
+        std::cout << "Read prefix\n";
         // Parse message length from big-endian 4-byte integer
         uint32_t message_length = 0;
         message_length |= (static_cast<uint32_t>(length_buffer[0]) << 24);
@@ -172,7 +174,8 @@ std::vector<unsigned char> MessageHelper::readMessage(
                                    boost::system::error_code ec,
                                    std::vector<unsigned char> message_buffer) {
                                  // Add message content to response
-                                 response.insert(response.end(),
+                               std::cout << "Read content\n";  
+                               response.insert(response.end(),
                                                  message_buffer.begin(),
                                                  message_buffer.end());
 
